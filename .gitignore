@@ -1,0 +1,8 @@
+node_modules
+.ssh/
+public/uploads/
+.env
+*.log
+logs/
+.vscode/
+.idea/

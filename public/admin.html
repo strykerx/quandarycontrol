@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quandary Admin - Room Management</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+    <nav class="navigation">
+        <button class="nav-btn" onclick="window.location.href='/index.html'">← Player View</button>
+    </nav>
+
+    <header class="admin-header">
+        <h1>🏗️ Quandary Admin Dashboard</h1>
+        <p>Room Creation & Management Center</p>
+    </header>
+
+    <div class="admin-container">
+        <div class="actions-header">
+            <button class="btn-primary" id="create-room-btn">Create New Room</button>
+            <div class="control-group" style="margin-top: 1rem;">
+                <h3>Global Display Controls</h3>
+                <div class="form-row">
+                    <label>Auto-close:
+                        <input type="checkbox" id="autoCloseToggle" checked
+                            onchange="adminApp.toggleAutoClose(this.checked)">
+                    </label>
+                    <label>Duration (sec):
+                        <select id="autoCloseSeconds" onchange="adminApp.setAutoCloseSeconds(this.value)">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="0">Manual</option>
+                        </select>
+                    </label>
+                </div>
+                <button onclick="adminApp.sendLightboxCommand()">Show Lightbox</button>
+            </div>
+        </div>
+
+        <div id="room-grid" class="room-grid">
+            <!-- Rooms will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Create/Edit Room Modal -->
+    <div id="room-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Create New Room</h2>
+                <button class="close-btn" id="close-modal">×</button>
+            </div>
+            <form id="room-form">
+                <div class="form-group">
+                    <label for="room-name">Room Name</label>
+                    <input type="text" id="room-name" class="form-input" required aria-describedby="room-name-help" aria-required="true">
+                    <div id="room-name-help" class="sr-only">Enter a unique name for your room (2-100 characters)</div>
+                </div>
+                <div class="form-group">
+                    <label for="timer-duration">Timer Duration (MM:SS)</label>
+                    <input type="text" id="timer-duration" class="form-input" placeholder="00:00" pattern="[0-9]{1,2}:[0-9]{2}" aria-describedby="timer-duration-help" aria-label="Set timer duration in minutes and seconds">
+                    <div id="timer-duration-help" class="sr-only">Set room timer duration in MM:SS format (00:00 for no timer)</div>
+                </div>
+                <div class="form-group">
+                    <label for="hint-type">Hint System</label>
+                    <select id="hint-type" class="form-input" aria-describedby="hint-type-help">
+                        <option value="broadcast">One-way Broadcast</option>
+                        <option value="chat">Two-way Chat</option>
+                    </select>
+                    <div id="hint-type-help" class="sr-only">Choose how hints are delivered to players</div>
+                </div>
+                <div class="form-group">
+                    <label for="api-variables">API Variables (JSON)</label>
+                    <div class="variable-controls">
+                        <textarea id="api-variables" class="form-input" rows="4" placeholder='{}' readonly aria-describedby="api-variables-help" aria-label="API Variables in JSON format"></textarea>
+                        <button type="button" class="btn-manage-variables btn-secondary" id="manage-variables-btn" aria-label="Open variable management dialog">
+                            ✏️ Manage Variables
+                        </button>
+                        <div id="api-variables-help" class="sr-only">Configure custom variables for API integration in JSON format</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="config">Configuration (JSON)</label>
+                    <div class="action-controls">
+                        <textarea id="config" class="form-input" rows="4" placeholder='{}' readonly aria-describedby="config-help" aria-label="Room configuration in JSON format"></textarea>
+                        <button type="button" class="btn-manage-actions btn-secondary" id="manage-actions-btn" aria-label="Open action configuration dialog">
+                            ⚡ Manage Actions
+                        </button>
+                        <div id="config-help" class="sr-only">Set room behavior and actions in JSON configuration format</div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="cancel-btn" aria-describedby="cancel-help">Cancel</button>
+                    <button type="submit" class="btn-primary" id="save-btn" aria-describedby="save-help" aria-live="polite">Save Room</button>
+                    <div id="cancel-help" class="sr-only">Close without saving changes</div>
+                    <div id="save-help" class="sr-only">Validate and save room configuration</div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Variable Creation Modal -->
+    <div id="variable-modal" class="modal">
+        <div class="modal-content variable-modal-content">
+            <div class="modal-header">
+                <h2>⚡ Manage API Variables</h2>
+                <button class="close-btn" id="close-variable-modal">×</button>
+            </div>
+
+            <div class="variable-modal-body">
+                <div class="variable-list-header">
+                    <button class="btn-add-variable btn-primary" id="add-variable-btn">
+                        ➕ Add Variable
+                    </button>
+                </div>
+
+                <div class="variables-list" id="variables-list">
+                    <!-- Variables will be rendered here -->
+                </div>
+
+                <div class="variable-actions">
+                    <button type="button" class="btn-secondary" id="cancel-variable-btn">Cancel</button>
+                    <button type="button" class="btn-primary" id="save-variables-btn">Save Variables</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Variable Edit/Create Form Modal -->
+    <div id="variable-form-modal" class="modal">
+        <div class="modal-content variable-form-content">
+            <div class="modal-header">
+                <h2 id="variable-form-title">Add Variable</h2>
+                <button class="close-btn" id="close-variable-form-modal">×</button>
+            </div>
+
+            <form id="variable-form">
+                <div class="form-group">
+                    <label for="variable-name">Variable Name</label>
+                    <input type="text" id="variable-name" class="form-input" placeholder="e.g., player_count" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="variable-type">Type</label>
+                    <select id="variable-type" class="form-input">
+                        <option value="string">String</option>
+                        <option value="number">Number</option>
+                        <option value="boolean">Boolean</option>
+                        <option value="array">Array (JSON)</option>
+                        <option value="object">Object (JSON)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="variable-value">Value</label>
+                    <textarea id="variable-value" class="form-input" rows="3" placeholder="Enter value"></textarea>
+                </div>
+
+                <div class="variable-form-actions">
+                    <button type="button" class="btn-secondary" id="cancel-variable-form-btn">Cancel</button>
+                    <button type="submit" class="btn-primary" id="save-variable-form-btn">Add Variable</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Action Management Modal -->
+    <div id="action-modal" class="modal">
+        <div class="modal-content action-modal-content">
+            <div class="modal-header">
+                <h2>⚡ Manage Actions</h2>
+                <button class="close-btn" id="close-action-modal">×</button>
+            </div>
+
+            <div class="action-modal-body">
+                <div class="action-list-header">
+                    <button class="btn-add-action btn-primary" id="add-action-btn">
+                        ➕ Add Action
+                    </button>
+                </div>
+
+                <div class="actions-list" id="actions-list">
+                    <!-- Actions will be rendered here -->
+                </div>
+
+                <div class="action-actions">
+                    <button type="button" class="btn-secondary" id="cancel-action-btn">Cancel</button>
+                    <button type="button" class="btn-primary" id="save-actions-btn">Save Actions</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Edit/Create Form Modal -->
+    <div id="action-form-modal" class="modal">
+        <div class="modal-content action-form-content">
+            <div class="modal-header">
+                <h2 id="action-form-title">Add Action</h2>
+                <button class="close-btn" id="close-action-form-modal">×</button>
+            </div>
+
+            <form id="action-form">
+                <div class="form-group">
+                    <label for="action-name">Action Name</label>
+                    <input type="text" id="action-name" class="form-input" placeholder="e.g., Welcome Message" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="action-type">Action Type</label>
+                    <select id="action-type" class="form-input">
+                        <option value="message">Display Message</option>
+                        <option value="state_change">Change Game State</option>
+                        <option value="timer">Set Timer</option>
+                        <option value="notification">Send Notification</option>
+                        <option value="sound">Play Sound</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="action-description">Description</label>
+                    <textarea id="action-description" class="form-input" rows="2" placeholder="Brief description of what this action does"></textarea>
+                </div>
+
+                <div class="form-group" id="action-enabled-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="action-enabled" checked>
+                        <span>Enabled</span>
+                    </label>
+                </div>
+
+                <div class="action-form-actions">
+                    <button type="button" class="btn-secondary" id="cancel-action-form-btn">Cancel</button>
+                    <button type="submit" class="btn-primary" id="save-action-form-btn">Add Action</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Owner Customization Panel Modal -->
+    <div id="owner-customization-modal" class="modal">
+        <div class="modal-content owner-customization-modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Owner Customization Panel</h2>
+                <button class="close-btn" id="close-owner-customization-modal">×</button>
+            </div>
+
+            <div class="owner-customization-body">
+                <!-- Settings Navigation Tabs -->
+                <div class="settings-tabs">
+                    <button class="settings-tab active" data-tab="system">System</button>
+                    <button class="settings-tab" data-tab="defaults">Defaults</button>
+                    <button class="settings-tab" data-tab="theme">Theme</button>
+                    <button class="settings-tab" data-tab="security">Security</button>
+                    <button class="settings-tab" data-tab="notifications">Notifications</button>
+                </div>
+
+                <!-- Settings Content -->
+                <div class="settings-content">
+                    <!-- System Settings -->
+                    <div id="system-tab" class="settings-section active">
+                        <h3>System Configuration</h3>
+                        <div class="setting-group">
+                            <label for="app-name">Application Name</label>
+                            <input type="text" id="app-name" class="form-input" placeholder="Quandary">
+                        </div>
+                        <div class="setting-group">
+                            <label for="max-rooms">Maximum Rooms Per User</label>
+                            <input type="number" id="max-rooms" class="form-input" min="1" max="100" value="10">
+                        </div>
+                        <div class="setting-group">
+                            <label for="enable-analytics">Enable Analytics</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enable-analytics" checked>
+                                <span>Allow anonymous usage analytics</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Default Settings -->
+                    <div id="defaults-tab" class="settings-section">
+                        <h3>Default Room Settings</h3>
+                        <div class="setting-group">
+                            <label for="default-timer">Default Timer Duration (MM:SS)</label>
+                            <input type="text" id="default-timer" class="form-input" placeholder="05:00" pattern="[0-9]{1,2}:[0-9]{2}" value="05:00">
+                        </div>
+                        <div class="setting-group">
+                            <label for="default-room-config">Default Room Configuration</label>
+                            <textarea id="default-room-config" class="form-input" rows="6" placeholder='{"theme": "default"}'></textarea>
+                        </div>
+                        <div class="setting-group">
+                            <label for="auto-start-timer">Auto-start Room Timer</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="auto-start-timer" checked>
+                                <span>Automatically start timer when room is created</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Theme Settings -->
+                    <div id="theme-tab" class="settings-section">
+                        <h3>Theme Configuration</h3>
+                        <div class="setting-group">
+                            <label for="primary-color">Primary Color</label>
+                            <input type="color" id="primary-color" class="form-input" value="#667eea">
+                        </div>
+                        <div class="setting-group">
+                            <label for="secondary-color">Secondary Color</label>
+                            <input type="color" id="secondary-color" class="form-input" value="#764ba2">
+                        </div>
+                        <div class="setting-group">
+                            <label for="accent-color">Accent Color</label>
+                            <input type="color" id="accent-color" class="form-input" value="#ff6b6b">
+                        </div>
+                        <div class="setting-group">
+                            <label for="dark-mode">Dark Mode</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="dark-mode">
+                                <span>Enable dark mode by default</span>
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label for="font-family">Font Family</label>
+                            <select id="font-family" class="form-input">
+                                <option value="Arial, sans-serif">Arial</option>
+                                <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
+                                <option value="'Roboto', sans-serif">Roboto</option>
+                                <option value="'Montserrat', sans-serif">Montserrat</option>
+                                <option value="'Inter', sans-serif">Inter</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Security Settings -->
+                    <div id="security-tab" class="settings-section">
+                        <h3>Security Configuration</h3>
+                        <div class="setting-group">
+                            <label for="session-timeout">Session Timeout (minutes)</label>
+                            <input type="number" id="session-timeout" class="form-input" min="5" max="480" value="60">
+                        </div>
+                        <div class="setting-group">
+                            <label for="require-password">Require Password for Rooms</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="require-password">
+                                <span>Mandate password protection for private rooms</span>
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label for="enable-2fa">Enable Two-Factor Authentication</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enable-2fa">
+                                <span>Require 2FA for admin access</span>
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label for="api-rate-limit">API Rate Limit (requests/minute)</label>
+                            <input type="number" id="api-rate-limit" class="form-input" min="10" max="1000" value="100">
+                        </div>
+                    </div>
+
+                    <!-- Notification Settings -->
+                    <div id="notifications-tab" class="settings-section">
+                        <h3>Notification Preferences</h3>
+                        <div class="setting-group">
+                            <label for="email-notifications">Email Notifications</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="email-notifications" checked>
+                                <span>Send email notifications for room activities</span>
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label for="room-creation-alerts">Room Creation Alerts</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="room-creation-alerts" checked>
+                                <span>Notify when rooms are created</span>
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label for="error-alerts">System Error Alerts</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="error-alerts" checked>
+                                <span>Notify on system errors</span>
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label for="daily-reports">Daily Reports</label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="daily-reports">
+                                <span>Send daily usage reports</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="owner-customization-actions">
+                    <button type="button" class="btn-secondary" id="reset-defaults-btn">Reset to Defaults</button>
+                    <button type="button" class="btn-secondary" id="cancel-owner-customization-btn">Cancel</button>
+                    <button type="button" class="btn-primary" id="save-owner-settings-btn">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/ui-state.js"></script>
+    <script src="/admin.js"></script>
+</body>
+</html>

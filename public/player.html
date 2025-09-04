@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quandary Control - Modern Player View</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        /* Modern, Bold Player Interface Styles */
+        :root {
+            --player-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --player-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --player-accent: #ff6b6b;
+            --bg-dark: #0a0a0a;
+            --bg-medium: #1a1a1a;
+            --bg-light: #2a2a2a;
+            --text-light: #ffffff;
+            --text-muted: #b3b3b3;
+            --border-radius: 12px;
+            --shadow: 0 8px 32px rgba(0,0,0,0.3);
+            --shadow-glow: 0 0 20px rgba(102, 126, 234, 0.2);
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-image:
+                radial-gradient(circle at 25% 25%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(245, 87, 108, 0.1) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .room-title {
+            font-size: 3rem;
+            font-weight: 700;
+            background: var(--player-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .room-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .status-badges {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            background: var(--bg-light);
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: pulseGlow 2s infinite;
+        }
+
+        /* Timer Section */
+        .timer-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .timer-display {
+            font-size: 6rem;
+            font-weight: 300;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 1rem;
+            background: var(--player-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 40px rgba(102, 126, 234, 0.5);
+            animation: timerPulse 1s ease-in-out infinite;
+        }
+
+        .timer-label {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        /* Game State Section */
+        .game-state-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .state-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+
+        .state-card h3 {
+            margin: 0 0 1rem 0;
+            color: #ff6b6b;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .state-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .state-item {
+            background: var(--bg-medium);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            min-width: fit-content;
+        }
+
+        .state-item strong {
+            color: #ff6b6b;
+        }
+
+        /* Hints Section */
+        .hints-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.8s ease-out 0.6s both;
+        }
+
+        .hints-section h3 {
+            margin: 0 0 1rem 0;
+            color: #ff6b6b;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .hints-container {
+            space-y: 1rem;
+        }
+
+        .hint-card {
+            background: var(--bg-medium);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid var(--player-accent);
+            animation: slideInLeft 0.5s ease-out;
+        }
+
+        .hint-card.new {
+            animation: hintPulse 1s ease-out;
+        }
+
+        /* Navigation */
+        .nav-section {
+            margin-top: 2rem;
+            text-align: center;
+            animation: fadeInUp 0.8s ease-out 0.8s both;
+        }
+
+        .nav-button {
+            background: var(--player-primary);
+            color: var(--text-light);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 0.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .nav-button:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-glow);
+            filter: brightness(1.1);
+        }
+
+        .nav-button.secondary {
+            background: var(--bg-medium);
+            color: var(--text-muted);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .room-title {
+                font-size: 2.5rem;
+            }
+
+            .game-state-section {
+                grid-template-columns: 1fr;
+            }
+
+            .timer-display {
+                font-size: 4rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes timerPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 5px rgba(255, 107, 107, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(255, 107, 107, 0.6); }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes hintPulse {
+            0% { background-color: var(--bg-medium); }
+            50% { background-color: rgba(102, 126, 234, 0.1); }
+            100% { background-color: var(--bg-medium); }
+        }
+
+        /* Loading states */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Error states */
+        .error {
+            color: var(--player-accent);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        /* Chat styles */
+        .chat-section { display: block; }
+        .chat-log { display: flex; flex-direction: column; gap: 0.25rem; }
+        .chat-row { margin: 0.25rem 0; font-size: 0.95rem; }
+        .chat-input-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+        .chat-input-row .form-input { flex: 1; }
+
+        /* Lightbox overlay for broadcast hints */
+        #hint-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        #hint-overlay .overlay-content {
+            background: var(--bg-medium);
+            color: var(--text-light);
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: var(--shadow-glow);
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        #hint-overlay .overlay-content h2 { margin-top: 0; color: #ff6b6b; }
+        #hint-overlay .overlay-content p { font-size: 1.2rem; }
+        #hint-overlay .overlay-close { margin-top: 1rem; }
+
+        /* Media lightbox styles */
+        #lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+        }
+
+        .lightbox-content {
+            background: var(--bg-medium);
+            border-radius: var(--border-radius);
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: var(--shadow-glow);
+            border: 1px solid rgba(255,255,255,0.15);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .lightbox-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background: var(--bg-light);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .lightbox-header h2 {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .lightbox-close {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255,255,255,0.1);
+            transform: scale(1.1);
+        }
+
+        .lightbox-media {
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            background: var(--bg-dark);
+        }
+
+        .lightbox-media img,
+        .lightbox-media video {
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .lightbox-media video {
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="room-title" id="room-title">Quandary Control</h1>
+            <p class="room-subtitle">Interactive Player Experience</p>
+            <div class="status-badges">
+                <span class="status-badge" id="status-badge">Connected</span>
+            </div>
+        </header>
+
+        <main>
+            <section class="timer-section" id="timer-section">
+                <div class="timer-display" id="timer-display">00:00</div>
+                <div class="timer-label">Time Remaining</div>
+            </section>
+
+            <section class="game-state-section" id="game-state-section">
+                <div class="state-card">
+                    <h3>Variables</h3>
+                    <div class="state-content" id="variable-display">
+                        <span class="state-item">Loading...</span>
+                    </div>
+                </div>
+                <div class="state-card">
+                    <h3>Configuration</h3>
+                    <div class="state-content" id="config-display">
+                        <span class="state-item">Ready</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="hints-section" id="hints-section">
+                <h3>Hints & Messages</h3>
+                <div class="hints-container" id="hint-container">
+                    <div class="hint-card">
+                        <p>Welcome to the Quandary Control system!</p>
+                        <small>Awaiting game state...</small>
+                    </div>
+                </div>
+            </section>
+            <!-- Chat section (shown when hint system is "chat") -->
+            <section class="state-card chat-section" id="chat-section">
+                <h3>Chat</h3>
+                <div id="chat-messages" style="max-height: 220px; overflow-y: auto;">
+                    <div class="chat-log" id="chat-log"></div>
+                </div>
+                <div class="chat-input-row">
+                    <input type="text" id="chat-input" class="form-input" placeholder="Type a message to the GM...">
+                    <button class="nav-button" id="send-chat">Send</button>
+                </div>
+            </section>
+        </main>
+
+        <nav class="nav-section">
+            <button class="nav-button secondary" onclick="window.location.href='/'">
+                ← Back to Admin
+            </button>
+            <button class="nav-button" onclick="requestUpdate()">
+                Refresh Status
+            </button>
+        </nav>
+    </div>
+
+    <div id="room-info" style="position: fixed; top: 1rem; right: 1rem; display: none; font-size: 0.8em;"></div>
+
+    <!-- Broadcast hint lightbox overlay -->
+    <div id="hint-overlay">
+        <div class="overlay-content">
+            <h2>New Hint</h2>
+            <p id="overlay-hint-text"></p>
+            <button class="nav-button overlay-close" id="hint-overlay-close">Close</button>
+        </div>
+    </div>
+
+    <!-- Media lightbox overlay -->
+    <div id="lightbox">
+        <div class="lightbox-content">
+            <div class="lightbox-header">
+                <h2 id="lightbox-headline"></h2>
+                <button class="lightbox-close" id="lightbox-close">×</button>
+            </div>
+            <div class="lightbox-media" id="lightbox-content"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/player.js"></script>
+</body>
+</html>

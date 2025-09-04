@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quandary Control - Game Master View</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="room-title">Game Master Control</h1>
+            <div class="status-badges">
+                <span class="status-badge" id="connection-status">Connected</span>
+            </div>
+        </header>
+
+        <main>
+            <section class="timer-section gm-control-section">
+                <h2 class="section-heading">⏳ Timer Controls</h2>
+                <div class="timer-controls">
+                    <button class="nav-button" id="start-timer">Start</button>
+                    <button class="nav-button" id="pause-timer">Pause</button>
+                    <button class="nav-button" id="stop-timer">Stop</button>
+                    <button class="nav-button secondary" id="add-time">+30s</button>
+                    <button class="nav-button secondary" id="subtract-time">-30s</button>
+                    <div class="timer-display" id="timer-display">00:00</div>
+                </div>
+            </section>
+
+            <section class="hint-system gm-control-section" id="broadcast-section">
+                <h2 class="section-heading">💡 Real-Time Hint System</h2>
+                <div class="hint-controls">
+                    <input type="text" id="hint-input" class="form-input"
+                        placeholder="Enter strategic hint..."
+                        style="background: var(--bg-light); color: var(--text-light);">
+                    <button class="nav-button" id="send-hint">Broadcast Hint</button>
+                    <button class="nav-button secondary" id="clear-hints">Clear Hints</button>
+                </div>
+                <div id="hint-history" class="state-card">
+                    <h3>Recent Hints</h3>
+                    <div class="state-content"></div>
+                </div>
+            </section>
+
+            <section class="chat-system gm-control-section" id="chat-section">
+                <h2 class="section-heading">💬 GM ↔ Player Chat</h2>
+                <div id="chat-messages" class="state-card" style="max-height: 220px; overflow-y: auto;">
+                    <h3>Conversation</h3>
+                    <div class="state-content" id="chat-log"></div>
+                </div>
+                <div class="hint-controls">
+                    <input type="text" id="chat-input" class="form-input"
+                        placeholder="Type a message to the player..."
+                        style="background: var(--bg-light); color: var(--text-light);">
+                    <button class="nav-button" id="send-chat">Send</button>
+                    <button class="nav-button secondary" id="clear-chat">Clear Chat</button>
+                </div>
+            </section>
+            
+            <!-- Media / Lightbox Manager -->
+            <section class="media-manager gm-control-section">
+                <h2 class="section-heading">🖼️ Media / Lightbox</h2>
+                <div class="upload-container">
+                    <input type="file" id="media-upload" accept="image/*,video/*" multiple style="display:none;">
+                    <button class="nav-button" id="trigger-upload">Choose Files</button>
+                    <button class="nav-button secondary" id="confirm-upload">Upload Selected</button>
+                </div>
+                <div id="file-list" class="file-list"></div>
+                <div id="upload-status" class="state-card" style="margin-top:.5rem;"></div>
+
+                <div class="media-display-section state-card" style="margin-top:1rem;">
+                    <h3>Uploaded Media</h3>
+                    <div id="media-gallery" class="media-gallery"></div>
+                    <div class="media-controls" style="margin-top:1rem; display:flex; gap:.75rem; flex-wrap:wrap; align-items:center;">
+                        <input type="text" id="lightbox-headline" class="form-input" placeholder="Enter headline text..." style="flex:1; min-width:240px;">
+                        <label class="checkbox-label" style="display:flex; align-items:center; gap:.25rem;">
+                            <input type="checkbox" id="autoclose-toggle" checked>
+                            <span>Autoclose</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:.25rem;">
+                            <span>Seconds</span>
+                            <select id="autoclose-seconds">
+                                <option value="5" selected>5</option>
+                                <option value="10">10</option>
+                                <option value="15">15</option>
+                                <option value="30">30</option>
+                                <option value="0">Manual</option>
+                            </select>
+                        </label>
+                        <button class="nav-button" id="show-lightbox">Show on Player Screen</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="variable-monitor gm-control-section">
+                <h2 class="section-heading">📊 Live Game Variables</h2>
+                <div id="variable-display" class="state-card">
+                    <div class="state-content"></div>
+                </div>
+            </section>
+        </main>
+
+        <nav class="nav-section">
+            <button class="nav-button secondary" onclick="window.location.href='/admin.html'">
+                ← Return to Dashboard
+            </button>
+        </nav>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/gm.js"></script>
+</body>
+</html>

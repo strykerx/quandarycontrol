@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quandary Control - Player View</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .admin-nav {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 100;
+        }
+
+        .admin-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .admin-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <nav class="admin-nav">
+        <button class="admin-btn" onclick="window.location.href='/'">Admin →</button>
+    </nav>
+
+    <div id="room-info" style="position: absolute; top: 5rem; right: 1rem; display: none; font-size: 0.9em;"></div>
+    <div id="game-container">
+        <div id="timer-display">00:00</div>
+        <div id="variable-display"></div>
+        <div id="hint-container"></div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/app.js"></script>
+</body>
+</html>
