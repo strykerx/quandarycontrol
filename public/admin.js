@@ -230,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function createRoomCard(room) {
         const card = document.createElement('div');
         card.className = 'room-card';
+        card.dataset.roomId = room.id;
 
         card.innerHTML = `
             <div class="room-card-header">
@@ -239,16 +240,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="room-links">
                         <a href="/room/${room.id}/player" class="room-link btn-player">Player View</a>
                         <a href="/room/${room.id}/gm" class="room-link btn-gm">GM View</a>
+                        <a href="/room/${room.id}/rules-editor" class="room-link btn-rules-edit">Edit Rules</a>
+                        <a href="/room/${room.id}/rules-slideshow" class="room-link btn-rules-start">Start Rules</a>
                     </div>
-                </div>
-                <div class="room-actions">
-                    <button class="btn-edit" onclick="editRoom('${room.id}')">Edit</button>
-                    <button class="btn-delete" onclick="deleteRoom('${room.id}')">Delete</button>
                 </div>
             </div>
             <div class="room-meta">
                 <div><strong>Timer:</strong> ${convertSecondsToMMSS(room.timer_duration)}</div>
                 <div><strong>Created:</strong> ${new Date(room.created_at).toLocaleDateString()}</div>
+            </div>
+            <div class="room-card-footer">
+                <div class="room-actions">
+                    <button class="btn-edit" onclick="editRoom('${room.id}')">Edit</button>
+                    <button class="btn-delete" onclick="deleteRoom('${room.id}')">Delete</button>
+                </div>
+            </div>
+            <div class="room-config-actions">
+                <button class="btn-config-layout" onclick="configureRoomLayout('${room.id}', '${room.name}')">
+                    🎨 Configure Layout
+                </button>
             </div>
         `;
 
@@ -468,6 +478,293 @@ document.addEventListener('DOMContentLoaded', () => {
     window.getRoomById = (id) => (store.getState().rooms || []).find(room => room.id === id);
     window.isCreatingRoom = () => !store.getState().currentEditingId;
     window.isEditingRoom = () => !!store.getState().currentEditingId;
+    
+    // Per-room layout configuration function
+    window.configureRoomLayout = (roomId, roomName) => {
+        // Set the current room ID for layout configuration
+        window.currentEditingRoomId = roomId;
+        
+        // Update the layout modal title
+        const layoutModal = document.getElementById('layout-modal');
+        if (layoutModal) {
+            const modalTitle = layoutModal.querySelector('.modal-header h2');
+            if (modalTitle) {
+                modalTitle.textContent = `🎨 Layout Configuration for "${roomName}"`;
+            }
+            // Directly show the modal
+            layoutModal.style.display = 'block';
+            
+            // Initialize previews when modal becomes visible
+            const initPreview = () => {
+                initializeLayoutPreviews();
+                layoutModal.removeEventListener('shown', initPreview);
+            };
+            layoutModal.addEventListener('shown', initPreview);
+        }
+        
+        // Load the room's current layout configuration
+        loadRoomLayoutConfiguration(roomId);
+        
+        // Set up room-specific layout controls
+        setupRoomLayoutControls(roomId);
+    };
+    
+    // Load room-specific layout configuration
+    async function loadRoomLayoutConfiguration(roomId) {
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/layout`);
+            const result = await response.json();
+            
+            if (result.success && result.data) {
+                const layoutConfig = result.data;
+                
+                // Apply the room's layout configuration to the form
+                applyRoomLayoutToForm(layoutConfig);
+                
+                // Show notification that room layout was loaded
+                if (window.adminLayoutControls && window.adminLayoutControls.showNotification) {
+                    window.adminLayoutControls.showNotification(`Loaded layout configuration for room`, 'info');
+                }
+            } else {
+                // No custom layout found, use defaults
+                console.log('No custom layout found for room, using defaults');
+            }
+        } catch (error) {
+            console.error('Error loading room layout configuration:', error);
+            // Silently fail and use defaults
+        }
+    }
+    
+    // Apply room layout configuration to form
+    function applyRoomLayoutToForm(layoutConfig) {
+        if (!layoutConfig || !layoutConfig.layouts) return;
+        
+        const layouts = layoutConfig.layouts;
+        
+        // Apply default layout configuration
+        if (layouts.default && layouts.default.grid) {
+            const gridConfig = layouts.default.grid;
+            const templateField = document.getElementById('default-grid-template');
+            const gapField = document.getElementById('default-gap-size');
+            
+            if (templateField && gridConfig.template) {
+                templateField.value = gridConfig.template;
+            }
+            if (gapField && gridConfig.gap) {
+                const gapValue = gridConfig.gap.replace('px', '');
+                gapField.value = gapValue;
+                const gapDisplay = document.getElementById('default-gap-value');
+                if (gapDisplay) {
+                    gapDisplay.textContent = gridConfig.gap;
+                }
+            }
+        }
+        
+        // Apply mobile layout configuration
+        if (layouts.mobile && layouts.mobile.flex) {
+            const flexConfig = layouts.mobile.flex;
+            const directionField = document.getElementById('mobile-stack-direction');
+            const breakpointField = document.getElementById('mobile-breakpoint');
+            
+            if (directionField && flexConfig.direction) {
+                directionField.value = flexConfig.direction;
+            }
+            if (breakpointField && flexConfig.breakpoint) {
+                breakpointField.value = flexConfig.breakpoint;
+            }
+        }
+        
+        // Apply compact layout configuration
+        if (layouts.compact) {
+            const compactConfig = layouts.compact;
+            const spacingField = document.getElementById('compact-spacing');
+            const hideNonEssentialField = document.getElementById('compact-hide-nonessential');
+            
+            if (spacingField && compactConfig.grid && compactConfig.grid.spacing) {
+                const spacingValue = compactConfig.grid.spacing.replace('px', '');
+                spacingField.value = spacingValue;
+                const spacingDisplay = document.getElementById('compact-spacing-value');
+                if (spacingDisplay) {
+                    spacingDisplay.textContent = compactConfig.grid.spacing;
+                }
+            }
+            if (hideNonEssentialField && compactConfig.hideNonEssential !== undefined) {
+                hideNonEssentialField.checked = compactConfig.hideNonEssential;
+            }
+        }
+        
+        // Apply custom layout configuration
+        if (layouts.custom || Object.keys(layouts).length > 3) {
+            const customField = document.getElementById('custom-layout-json');
+            if (customField) {
+                customField.value = JSON.stringify(layoutConfig, null, 2);
+                
+                // Switch to custom tab
+                const customTab = document.querySelector('[data-layout="custom"]');
+                if (customTab) {
+                    customTab.click();
+                }
+            }
+        }
+        
+        // Update layout previews
+        if (window.updateLayoutPreview) {
+            const activeTab = document.querySelector('.layout-tab.active');
+            if (activeTab) {
+                window.updateLayoutPreview(activeTab.dataset.layout);
+            }
+        }
+    }
+    
+    // Set up room-specific layout controls
+    function setupRoomLayoutControls(roomId) {
+        // Update the room selector in the layout modal
+        const roomSelector = document.getElementById('preview-room-selector');
+        if (roomSelector) {
+            roomSelector.value = roomId;
+            
+            // Trigger change event to update the current room in layout controls
+            const event = new Event('change', { bubbles: true });
+            roomSelector.dispatchEvent(event);
+        }
+        
+        // Update the apply layout button to target this specific room
+        const applyLayoutBtn = document.getElementById('apply-layout-to-room');
+        if (applyLayoutBtn) {
+            // Remove any existing event listeners
+            applyLayoutBtn.replaceWith(applyLayoutBtn.cloneNode(true));
+            
+            // Get the fresh reference
+            const freshApplyBtn = document.getElementById('apply-layout-to-room');
+            
+            // Add room-specific event listener
+            freshApplyBtn.addEventListener('click', () => {
+                applyLayoutToSpecificRoom(roomId);
+            });
+        }
+    }
+    
+    // Apply layout to a specific room
+    async function applyLayoutToSpecificRoom(roomId) {
+        if (!roomId) {
+            if (window.adminLayoutControls && window.adminLayoutControls.showNotification) {
+                window.adminLayoutControls.showNotification('No room specified for layout application', 'error');
+            }
+            return;
+        }
+        
+        const activeTab = document.querySelector('.layout-tab.active');
+        if (!activeTab) return;
+        
+        const layoutType = activeTab.dataset.layout;
+        let layoutConfig;
+        
+        // Use the layout controls instance if available
+        if (window.adminLayoutControls && window.adminLayoutControls.gatherLayoutConfiguration) {
+            layoutConfig = window.adminLayoutControls.gatherLayoutConfiguration(layoutType);
+        } else {
+            // Fallback to local implementation
+            layoutConfig = gatherLayoutConfiguration(layoutType);
+        }
+        
+        if (!layoutConfig) {
+            if (window.adminLayoutControls && window.adminLayoutControls.showNotification) {
+                window.adminLayoutControls.showNotification('Invalid layout configuration', 'error');
+            }
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/layout`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ layout: layoutConfig })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                if (window.adminLayoutControls && window.adminLayoutControls.showNotification) {
+                    window.adminLayoutControls.showNotification('Layout applied to room successfully!', 'success');
+                }
+                
+                // Close the layout modal
+                const layoutModal = document.getElementById('layout-modal');
+                if (layoutModal) {
+                    layoutModal.style.display = 'none';
+                }
+            } else {
+                if (window.adminLayoutControls && window.adminLayoutControls.showNotification) {
+                    window.adminLayoutControls.showNotification(`Failed to apply layout: ${result.error}`, 'error');
+                }
+            }
+        } catch (error) {
+            console.error('Error applying layout to room:', error);
+            if (window.adminLayoutControls && window.adminLayoutControls.showNotification) {
+                window.adminLayoutControls.showNotification('Error applying layout to room', 'error');
+            }
+        }
+    }
+    
+    // Fallback layout configuration gathering function
+    function gatherLayoutConfiguration(layoutType) {
+        const config = { layouts: {} };
+        
+        switch (layoutType) {
+            case 'default':
+                const gridTemplate = document.getElementById('default-grid-template')?.value;
+                const gapSize = document.getElementById('default-gap-size')?.value;
+                if (gridTemplate) {
+                    config.layouts.default = {
+                        grid: {
+                            template: gridTemplate,
+                            gap: `${gapSize}px`
+                        }
+                    };
+                }
+                break;
+                
+            case 'mobile':
+                const stackDirection = document.getElementById('mobile-stack-direction')?.value;
+                const breakpoint = document.getElementById('mobile-breakpoint')?.value;
+                if (stackDirection) {
+                    config.layouts.mobile = {
+                        flex: {
+                            direction: stackDirection,
+                            breakpoint: breakpoint
+                        }
+                    };
+                }
+                break;
+                
+            case 'compact':
+                const spacing = document.getElementById('compact-spacing')?.value;
+                const hideNonEssential = document.getElementById('compact-hide-nonessential')?.checked;
+                config.layouts.compact = {
+                    grid: {
+                        spacing: `${spacing}px`
+                    },
+                    hideNonEssential: hideNonEssential
+                };
+                break;
+                
+            case 'custom':
+                const customJson = document.getElementById('custom-layout-json')?.value;
+                if (customJson) {
+                    try {
+                        return JSON.parse(customJson);
+                    } catch (e) {
+                        console.warn('Invalid custom layout JSON:', e);
+                        return null;
+                    }
+                }
+                break;
+        }
+        
+        return config;
+    }
 
     // Auto-close controls
     window.adminApp = {
@@ -1449,4 +1746,1094 @@ document.addEventListener('DOMContentLoaded', () => {
             closeOwnerCustomizationModal();
         }
     });
+
+    // Initialize Theme Manager
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait for theme manager to be ready
+        window.addEventListener('themeManagerReady', function(e) {
+            const themeManager = window.themeManager;
+            
+            // Add theme selector styles
+            themeManager.addThemeSelectorStyles();
+            
+            // Create theme selector in the admin interface
+            themeManager.createThemeSelector('theme-selector-container', function(selectedTheme) {
+                // Update theme info when theme changes
+                const themeInfo = document.getElementById('theme-info');
+                const theme = themeManager.getTheme(selectedTheme);
+                if (theme && themeInfo) {
+                    themeInfo.textContent = `Current theme: ${theme.name} - ${theme.description}`;
+                }
+                
+                // If live preview is enabled, show a notification
+                if (themeManager.isLivePreviewEnabled()) {
+                    // Create a temporary notification
+                    const notification = document.createElement('div');
+                    notification.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: var(--bg-medium);
+                        color: var(--text-light);
+                        padding: 1rem;
+                        border-radius: var(--border-radius);
+                        box-shadow: var(--shadow);
+                        z-index: 1000;
+                        animation: slideIn 0.3s ease-out;
+                    `;
+                    notification.textContent = `Theme changed to ${theme.name}`;
+                    document.body.appendChild(notification);
+                    
+                    // Remove notification after 3 seconds
+                    setTimeout(() => {
+                        notification.style.animation = 'slideOut 0.3s ease-out';
+                        setTimeout(() => {
+                            document.body.removeChild(notification);
+                        }, 300);
+                    }, 3000);
+                }
+            });
+            
+            // Update initial theme info
+            const themeInfo = document.getElementById('theme-info');
+            const currentTheme = themeManager.getCurrentTheme();
+            const theme = themeManager.getTheme(currentTheme);
+            if (theme && themeInfo) {
+                themeInfo.textContent = `Current theme: ${theme.name} - ${theme.description}`;
+            }
+        });
+    });
+    
+    // Layout Management Functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const manageLayoutBtn = document.getElementById('manage-layout-btn');
+        const layoutModal = document.getElementById('layout-modal');
+        const closeLayoutModal = document.getElementById('close-layout-modal');
+        const cancelLayoutBtn = document.getElementById('cancel-layout-btn');
+        const saveLayoutBtn = document.getElementById('save-layout-btn');
+        const validateLayoutBtn = document.getElementById('validate-layout-btn');
+        const loadPresetBtn = document.getElementById('load-preset-btn');
+        const layoutPreset = document.getElementById('layout-preset');
+        const openLayoutBuilderBtn = document.getElementById('open-layout-builder');
+        
+        // Layout tab switching
+        const layoutTabs = document.querySelectorAll('.layout-tab');
+        const layoutSections = document.querySelectorAll('.layout-section');
+        
+        // Range input value displays
+        const defaultGapSize = document.getElementById('default-gap-size');
+        const defaultGapValue = document.getElementById('default-gap-value');
+        const compactSpacing = document.getElementById('compact-spacing');
+        const compactSpacingValue = document.getElementById('compact-spacing-value');
+        
+        // Initialize layout manager
+        if (manageLayoutBtn) {
+            manageLayoutBtn.addEventListener('click', openLayoutModal);
+        }
+        
+        if (closeLayoutModal) {
+            closeLayoutModal.addEventListener('click', closeLayoutModalHandler);
+        }
+        
+        if (cancelLayoutBtn) {
+            cancelLayoutBtn.addEventListener('click', closeLayoutModalHandler);
+        }
+        
+        if (saveLayoutBtn) {
+            saveLayoutBtn.addEventListener('click', saveLayoutConfiguration);
+        }
+
+        // Open standalone Layout Builder (passes roomId when available)
+        if (openLayoutBuilderBtn) {
+            openLayoutBuilderBtn.addEventListener('click', function () {
+                const rid = window.currentEditingRoomId || (typeof getCurrentRoomId === 'function' ? getCurrentRoomId() : null);
+                const url = rid ? `/layout-builder.html?roomId=${encodeURIComponent(rid)}` : '/layout-builder.html';
+                window.location.href = url;
+            });
+        }
+        
+        if (validateLayoutBtn) {
+            validateLayoutBtn.addEventListener('click', validateCustomLayout);
+        }
+        
+        if (loadPresetBtn) {
+            loadPresetBtn.addEventListener('click', loadLayoutPreset);
+        }
+        
+        if (layoutPreset) {
+            layoutPreset.addEventListener('change', updateLayoutInfo);
+        }
+        
+        // Layout tab switching
+        layoutTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetLayout = tab.dataset.layout;
+                switchLayoutTab(targetLayout);
+            });
+        });
+        
+        // Range input value updates
+        if (defaultGapSize && defaultGapValue) {
+            defaultGapSize.addEventListener('input', () => {
+                defaultGapValue.textContent = defaultGapSize.value + 'px';
+                updateLayoutPreview('default');
+            });
+        }
+        
+        if (compactSpacing && compactSpacingValue) {
+            compactSpacing.addEventListener('input', () => {
+                compactSpacingValue.textContent = compactSpacing.value + 'px';
+                updateLayoutPreview('compact');
+            });
+        }
+        
+        // Configuration change listeners
+        const configInputs = [
+            'default-grid-template', 'mobile-stack-direction', 'mobile-breakpoint',
+            'compact-hide-nonessential', 'custom-layout-json'
+        ];
+        
+        configInputs.forEach(inputId => {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.addEventListener('change', () => {
+                    const layoutType = inputId.split('-')[0];
+                    updateLayoutPreview(layoutType);
+                });
+                
+                if (input.type === 'textarea' || input.type === 'text') {
+                    input.addEventListener('input', () => {
+                        const layoutType = inputId.split('-')[0];
+                        updateLayoutPreview(layoutType);
+                    });
+                }
+            }
+        });
+        
+        function openLayoutModal() {
+            layoutModal.style.display = 'block';
+            initializeLayoutPreviews();
+            updateLayoutInfo();
+        }
+        
+        function closeLayoutModalHandler() {
+            layoutModal.style.display = 'none';
+        }
+        
+        function switchLayoutTab(layoutType) {
+            // Update tab states
+            layoutTabs.forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.layout === layoutType);
+            });
+            
+            // Update section visibility
+            layoutSections.forEach(section => {
+                section.classList.toggle('active', section.id === `${layoutType}-layout`);
+            });
+            
+            // Update preview for the active layout
+            updateLayoutPreview(layoutType);
+        }
+        
+        function initializeLayoutPreviews() {
+            // Generate preview content for each layout type
+            updateLayoutPreview('default');
+            updateLayoutPreview('mobile');
+            updateLayoutPreview('compact');
+            updateLayoutPreview('custom');
+        }
+        
+        function updateLayoutPreview(layoutType) {
+            const previewElement = document.getElementById(`${layoutType}-preview`);
+            if (!previewElement) return;
+            
+            let previewHTML = '';
+            
+            switch (layoutType) {
+                case 'default':
+                    const gridTemplate = document.getElementById('default-grid-template')?.value || '1fr 2fr';
+                    const gapSize = document.getElementById('default-gap-size')?.value || '10';
+                    previewHTML = generateGridLayoutPreview(gridTemplate, gapSize);
+                    break;
+                    
+                case 'mobile':
+                    const stackDirection = document.getElementById('mobile-stack-direction')?.value || 'column';
+                    const breakpoint = document.getElementById('mobile-breakpoint')?.value || '768px';
+                    previewHTML = generateMobileLayoutPreview(stackDirection, breakpoint);
+                    break;
+                    
+                case 'compact':
+                    const spacing = document.getElementById('compact-spacing')?.value || '8';
+                    const hideNonEssential = document.getElementById('compact-hide-nonessential')?.checked || true;
+                    previewHTML = generateCompactLayoutPreview(spacing, hideNonEssential);
+                    break;
+                    
+                case 'custom':
+                    const customJson = document.getElementById('custom-layout-json')?.value || '{}';
+                    previewHTML = generateCustomLayoutPreview(customJson);
+                    break;
+            }
+            
+            previewElement.innerHTML = previewHTML;
+        }
+        
+        function generateGridLayoutPreview(gridTemplate, gapSize) {
+            const columns = gridTemplate.split(' ').length;
+            return `
+                <div class="preview-grid" style="
+                    display: grid;
+                    grid-template-columns: ${gridTemplate};
+                    gap: ${gapSize}px;
+                    height: 200px;
+                    border: 1px solid rgba(255,255,255,0.2);
+                    border-radius: 8px;
+                    padding: 10px;
+                ">
+                    <div class="preview-item" style="background: rgba(102, 126, 234, 0.3); border-radius: 4px; display: flex; align-items: center; justify-content: center;">Sidebar</div>
+                    <div class="preview-item" style="background: rgba(118, 75, 162, 0.3); border-radius: 4px; display: flex; align-items: center; justify-content: center;">Main Content</div>
+                    ${columns > 2 ? '<div class="preview-item" style="background: rgba(255, 107, 107, 0.3); border-radius: 4px; display: flex; align-items: center; justify-content: center;">Extra</div>' : ''}
+                </div>
+            `;
+        }
+        
+        function generateMobileLayoutPreview(stackDirection, breakpoint) {
+            return `
+                <div class="preview-mobile" style="
+                    display: flex;
+                    flex-direction: ${stackDirection};
+                    gap: 10px;
+                    height: 200px;
+                    border: 1px solid rgba(255,255,255,0.2);
+                    border-radius: 8px;
+                    padding: 10px;
+                ">
+                    <div class="preview-item" style="background: rgba(102, 126, 234, 0.3); border-radius: 4px; flex: 1; display: flex; align-items: center; justify-content: center;">Header</div>
+                    <div class="preview-item" style="background: rgba(118, 75, 162, 0.3); border-radius: 4px; flex: 2; display: flex; align-items: center; justify-content: center;">Content</div>
+                    <div class="preview-item" style="background: rgba(255, 107, 107, 0.3); border-radius: 4px; flex: 1; display: flex; align-items: center; justify-content: center;">Footer</div>
+                </div>
+                <div style="margin-top: 10px; font-size: 0.8rem; color: var(--text-muted);">
+                    Breakpoint: ${breakpoint}
+                </div>
+            `;
+        }
+        
+        function generateCompactLayoutPreview(spacing, hideNonEssential) {
+            return `
+                <div class="preview-compact" style="
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: ${spacing}px;
+                    height: 200px;
+                    border: 1px solid rgba(255,255,255,0.2);
+                    border-radius: 8px;
+                    padding: ${spacing}px;
+                ">
+                    <div class="preview-item" style="background: rgba(102, 126, 234, 0.3); border-radius: 4px; padding: 8px; display: flex; align-items: center; justify-content: center;">Timer</div>
+                    <div class="preview-item" style="background: rgba(118, 75, 162, 0.3); border-radius: 4px; padding: 8px; display: flex; align-items: center; justify-content: center;">Main Content</div>
+                    ${!hideNonEssential ? '<div class="preview-item" style="background: rgba(255, 107, 107, 0.3); border-radius: 4px; padding: 8px; display: flex; align-items: center; justify-content: center;">Extra Info</div>' : ''}
+                </div>
+            `;
+        }
+        
+        function generateCustomLayoutPreview(customJson) {
+            try {
+                const layout = JSON.parse(customJson);
+                // For now, show a simple representation
+                return `
+                    <div class="preview-custom" style="
+                        height: 200px;
+                        border: 1px solid rgba(255,255,255,0.2);
+                        border-radius: 8px;
+                        padding: 10px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: rgba(102, 126, 234, 0.1);
+                    ">
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.2rem; margin-bottom: 10px;">Custom Layout</div>
+                            <div style="font-size: 0.9rem; color: var(--text-muted);">
+                                ${layout.layouts ? 'Valid layout configuration' : 'Basic custom layout'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                return `
+                    <div class="preview-custom" style="
+                        height: 200px;
+                        border: 1px solid rgba(255, 107, 107, 0.5);
+                        border-radius: 8px;
+                        padding: 10px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: rgba(255, 107, 107, 0.1);
+                    ">
+                        <div style="text-align: center; color: var(--text-muted);">
+                            <div style="font-size: 1.2rem; margin-bottom: 10px;">Invalid JSON</div>
+                            <div style="font-size: 0.9rem;">Please check your layout configuration</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        function validateCustomLayout() {
+            const customJson = document.getElementById('custom-layout-json')?.value || '{}';
+            const resultsDiv = document.getElementById('layout-validation-results');
+            
+            if (!resultsDiv) return;
+            
+            try {
+                // Use the layout validator if available
+                if (window.LayoutValidator) {
+                    const result = window.LayoutValidator.validateLayout(customJson);
+                    if (result.valid) {
+                        resultsDiv.innerHTML = `
+                            <div class="validation-success" style="color: #28a745; margin-top: 10px;">
+                                ✓ Layout configuration is valid
+                            </div>
+                        `;
+                    } else {
+                        resultsDiv.innerHTML = `
+                            <div class="validation-error" style="color: #dc3545; margin-top: 10px;">
+                                ✗ Layout validation failed:<br>
+                                ${result.errors.map(e => `• ${e}`).join('<br>')}
+                            </div>
+                        `;
+                    }
+                } else {
+                    // Fallback validation
+                    JSON.parse(customJson);
+                    resultsDiv.innerHTML = `
+                        <div class="validation-success" style="color: #28a745; margin-top: 10px;">
+                            ✓ JSON is valid
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="validation-error" style="color: #dc3545; margin-top: 10px;">
+                        ✗ Invalid JSON: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function loadLayoutPreset() {
+            const activeTab = document.querySelector('.layout-tab.active');
+            const layoutType = activeTab ? activeTab.dataset.layout : 'default';
+            
+            const presets = {
+                default: {
+                    gridTemplate: '1fr 2fr',
+                    gapSize: '10'
+                },
+                mobile: {
+                    stackDirection: 'column',
+                    breakpoint: '768px'
+                },
+                compact: {
+                    spacing: '8',
+                    hideNonEssential: true
+                },
+                custom: {
+                    json: JSON.stringify({
+                        layouts: {
+                            default: {
+                                grid: {
+                                    template: '1fr 2fr',
+                                    gap: '10px'
+                                }
+                            },
+                            mobile: {
+                                flex: {
+                                    direction: 'column',
+                                    breakpoint: '768px'
+                                }
+                            }
+                        }
+                    }, null, 2)
+                }
+            };
+            
+            const preset = presets[layoutType];
+            if (!preset) return;
+            
+            switch (layoutType) {
+                case 'default':
+                    if (document.getElementById('default-grid-template')) {
+                        document.getElementById('default-grid-template').value = preset.gridTemplate;
+                    }
+                    if (document.getElementById('default-gap-size')) {
+                        document.getElementById('default-gap-size').value = preset.gapSize;
+                        if (defaultGapValue) {
+                            defaultGapValue.textContent = preset.gapSize + 'px';
+                        }
+                    }
+                    break;
+                    
+                case 'mobile':
+                    if (document.getElementById('mobile-stack-direction')) {
+                        document.getElementById('mobile-stack-direction').value = preset.stackDirection;
+                    }
+                    if (document.getElementById('mobile-breakpoint')) {
+                        document.getElementById('mobile-breakpoint').value = preset.breakpoint;
+                    }
+                    break;
+                    
+                case 'compact':
+                    if (document.getElementById('compact-spacing')) {
+                        document.getElementById('compact-spacing').value = preset.spacing;
+                        if (compactSpacingValue) {
+                            compactSpacingValue.textContent = preset.spacing + 'px';
+                        }
+                    }
+                    if (document.getElementById('compact-hide-nonessential')) {
+                        document.getElementById('compact-hide-nonessential').checked = preset.hideNonEssential;
+                    }
+                    break;
+                    
+                case 'custom':
+                    if (document.getElementById('custom-layout-json')) {
+                        document.getElementById('custom-layout-json').value = preset.json;
+                    }
+                    break;
+            }
+            
+            updateLayoutPreview(layoutType);
+        }
+        
+        function saveLayoutConfiguration() {
+            const activeTab = document.querySelector('.layout-tab.active');
+            const layoutType = activeTab ? activeTab.dataset.layout : 'default';
+            
+            let config = {};
+            
+            switch (layoutType) {
+                case 'default':
+                    config = {
+                        type: 'grid',
+                        template: document.getElementById('default-grid-template')?.value || '1fr 2fr',
+                        gap: (document.getElementById('default-gap-size')?.value || '10') + 'px'
+                    };
+                    break;
+                    
+                case 'mobile':
+                    config = {
+                        type: 'flex',
+                        direction: document.getElementById('mobile-stack-direction')?.value || 'column',
+                        breakpoint: document.getElementById('mobile-breakpoint')?.value || '768px'
+                    };
+                    break;
+                    
+                case 'compact':
+                    config = {
+                        type: 'compact',
+                        spacing: (document.getElementById('compact-spacing')?.value || '8') + 'px',
+                        hideNonEssential: document.getElementById('compact-hide-nonessential')?.checked || true
+                    };
+                    break;
+                    
+                case 'custom':
+                    try {
+                        config = JSON.parse(document.getElementById('custom-layout-json')?.value || '{}');
+                    } catch (error) {
+                        alert('Invalid JSON in custom layout configuration');
+                        return;
+                    }
+                    break;
+            }
+            
+            // Save to localStorage for now (in a real app, this would be saved to the server)
+            localStorage.setItem('quandary-layout-config', JSON.stringify({
+                preset: layoutType,
+                config: config,
+                timestamp: Date.now()
+            }));
+            
+            // Update the preset selector
+            if (layoutPreset) {
+                layoutPreset.value = layoutType;
+            }
+            
+            // Show success message
+            showNotification('Layout configuration saved successfully!', 'success');
+            
+            // Close modal
+            closeLayoutModalHandler();
+        }
+        
+        function updateLayoutInfo() {
+            const selectedPreset = layoutPreset?.value || 'default';
+            const infoElement = document.getElementById('layout-info');
+            
+            if (!infoElement) return;
+            
+            const descriptions = {
+                default: 'Default grid layout with sidebar and main content areas',
+                mobile: 'Mobile-optimized layout with responsive breakpoints',
+                compact: 'Compact layout with reduced spacing and essential components only',
+                custom: 'Custom layout configuration with JSON-defined structure'
+            };
+            
+            infoElement.textContent = `Current: ${descriptions[selectedPreset]}`;
+        }
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? 'var(--player-primary)' : 'var(--bg-medium)'};
+                color: var(--text-light);
+                padding: 1rem;
+                border-radius: var(--border-radius);
+                box-shadow: var(--shadow);
+                z-index: 1000;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Remove notification after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === layoutModal) {
+                closeLayoutModalHandler();
+            }
+        });
+        
+        // Initialize layout info on load
+        updateLayoutInfo();
+    });
+    
+    // Enhanced Layout Configuration with Schema Validation and Real-time Preview
+    function initializeEnhancedLayoutControls() {
+        // Add real-time validation to custom layout JSON
+        const customLayoutJson = document.getElementById('custom-layout-json');
+        if (customLayoutJson) {
+            let validationTimeout;
+            customLayoutJson.addEventListener('input', () => {
+                clearTimeout(validationTimeout);
+                validationTimeout = setTimeout(() => {
+                    validateLayoutConfiguration(customLayoutJson.value);
+                }, 500);
+            });
+        }
+        
+        // Add live preview toggle
+        addLivePreviewControls();
+        
+        // Initialize WebSocket connection for real-time updates
+        initializeLayoutWebSocket();
+    }
+    
+    function addLivePreviewControls() {
+        const layoutModal = document.getElementById('layout-modal');
+        if (!layoutModal) return;
+        
+        const modalHeader = layoutModal.querySelector('.modal-header h2');
+        if (modalHeader) {
+            const livePreviewToggle = document.createElement('div');
+            livePreviewToggle.className = 'live-preview-controls';
+            livePreviewToggle.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 0.9rem;
+                margin-left: auto;
+            `;
+            livePreviewToggle.innerHTML = `
+                <label class="checkbox-label">
+                    <input type="checkbox" id="live-preview-toggle" checked>
+                    <span>Live Preview</span>
+                </label>
+                <button id="apply-layout-preview" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                    Apply to Room
+                </button>
+            `;
+            
+            modalHeader.parentNode.appendChild(livePreviewToggle);
+            
+            // Add event listeners
+            const livePreviewCheckbox = document.getElementById('live-preview-toggle');
+            const applyLayoutBtn = document.getElementById('apply-layout-preview');
+            
+            livePreviewCheckbox.addEventListener('change', (e) => {
+                window.layoutLivePreviewEnabled = e.target.checked;
+                if (e.target.checked) {
+                    updateLayoutPreviewInRealTime();
+                }
+            });
+            
+            applyLayoutBtn.addEventListener('click', applyLayoutToCurrentRoom);
+        }
+    }
+    
+    function validateLayoutConfiguration(jsonString) {
+        const resultsDiv = document.getElementById('layout-validation-results');
+        if (!resultsDiv) return;
+        
+        try {
+            // Use the layout validator if available
+            if (window.LayoutValidator && window.layoutValidator) {
+                const result = window.layoutValidator.validateLayout(jsonString);
+                displayValidationResults(resultsDiv, result);
+            } else {
+                // Fallback validation
+                const parsed = JSON.parse(jsonString);
+                const result = { valid: true, errors: [] };
+                
+                // Basic validation
+                if (!parsed.layouts) {
+                    result.valid = false;
+                    result.errors.push('Missing "layouts" object');
+                }
+                
+                if (parsed.layouts && !parsed.layouts.default) {
+                    result.valid = false;
+                    result.errors.push('Missing "default" layout');
+                }
+                
+                displayValidationResults(resultsDiv, result);
+            }
+        } catch (error) {
+            displayValidationResults(resultsDiv, {
+                valid: false,
+                errors: [`Invalid JSON: ${error.message}`]
+            });
+        }
+    }
+    
+    function displayValidationResults(container, result) {
+        if (result.valid) {
+            container.innerHTML = `
+                <div class="validation-success" style="color: #28a745; margin-top: 10px; padding: 0.5rem; background: rgba(40, 167, 69, 0.1); border-radius: 4px;">
+                    ✓ Layout configuration is valid
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="validation-error" style="color: #dc3545; margin-top: 10px; padding: 0.5rem; background: rgba(220, 53, 69, 0.1); border-radius: 4px;">
+                    ✗ Layout validation failed:<br>
+                    ${result.errors.map(e => `• ${e}`).join('<br>')}
+                </div>
+            `;
+        }
+    }
+    
+    function updateLayoutPreviewInRealTime() {
+        if (!window.layoutLivePreviewEnabled) return;
+        
+        const activeTab = document.querySelector('.layout-tab.active');
+        if (!activeTab) return;
+        
+        const layoutType = activeTab.dataset.layout;
+        const layoutConfig = gatherLayoutConfiguration(layoutType);
+        
+        if (layoutConfig) {
+            // Send preview update to connected rooms via WebSocket
+            broadcastLayoutPreview(layoutConfig);
+            
+            // Update local preview
+            updateLayoutPreview(layoutType);
+        }
+    }
+    
+    function gatherLayoutConfiguration(layoutType) {
+        const config = { layouts: {} };
+        
+        switch (layoutType) {
+            case 'default':
+                const gridTemplate = document.getElementById('default-grid-template')?.value;
+                const gapSize = document.getElementById('default-gap-size')?.value;
+                if (gridTemplate) {
+                    config.layouts.default = {
+                        grid: {
+                            template: gridTemplate,
+                            gap: `${gapSize}px`
+                        }
+                    };
+                }
+                break;
+                
+            case 'mobile':
+                const stackDirection = document.getElementById('mobile-stack-direction')?.value;
+                const breakpoint = document.getElementById('mobile-breakpoint')?.value;
+                if (stackDirection) {
+                    config.layouts.mobile = {
+                        flex: {
+                            direction: stackDirection,
+                            breakpoint: breakpoint
+                        }
+                    };
+                }
+                break;
+                
+            case 'compact':
+                const spacing = document.getElementById('compact-spacing')?.value;
+                const hideNonEssential = document.getElementById('compact-hide-nonessential')?.checked;
+                config.layouts.compact = {
+                    grid: {
+                        spacing: `${spacing}px`
+                    },
+                    hideNonEssential: hideNonEssential
+                };
+                break;
+                
+            case 'custom':
+                const customJson = document.getElementById('custom-layout-json')?.value;
+                if (customJson) {
+                    try {
+                        return JSON.parse(customJson);
+                    } catch (e) {
+                        console.warn('Invalid custom layout JSON:', e);
+                        return null;
+                    }
+                }
+                break;
+        }
+        
+        return config;
+    }
+    
+    function initializeLayoutWebSocket() {
+        // Initialize WebSocket connection for real-time layout updates
+        if (typeof io !== 'undefined') {
+            window.layoutSocket = io();
+            
+            window.layoutSocket.on('layout_preview', (data) => {
+                console.log('Received layout preview update:', data);
+                // Handle incoming layout preview updates
+            });
+            
+            window.layoutSocket.on('layout_updated', (data) => {
+                console.log('Layout configuration updated:', data);
+                showNotification('Layout configuration updated successfully!', 'success');
+            });
+        }
+    }
+    
+    function broadcastLayoutPreview(layoutConfig) {
+        if (window.layoutSocket) {
+            window.layoutSocket.emit('layout_preview', {
+                layout: layoutConfig,
+                timestamp: new Date().toISOString(),
+                source: 'admin'
+            });
+        }
+    }
+    
+    function applyLayoutToCurrentRoom() {
+        const activeTab = document.querySelector('.layout-tab.active');
+        if (!activeTab) return;
+        
+        const layoutType = activeTab.dataset.layout;
+        const layoutConfig = gatherLayoutConfiguration(layoutType);
+        
+        if (!layoutConfig) {
+            showNotification('Invalid layout configuration', 'error');
+            return;
+        }
+        
+        // Get current room ID (this would need to be set when editing a specific room)
+        const currentRoomId = window.currentEditingRoomId || getCurrentRoomId();
+        
+        if (!currentRoomId) {
+            showNotification('No room selected for layout application', 'error');
+            return;
+        }
+        
+        // Apply layout to room via API
+        fetch(`/api/rooms/${currentRoomId}/layout`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ layout: layoutConfig })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showNotification('Layout applied to room successfully!', 'success');
+                closeLayoutModalHandler();
+            } else {
+                showNotification(`Failed to apply layout: ${result.error}`, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error applying layout:', error);
+            showNotification('Error applying layout to room', 'error');
+        });
+    }
+    
+    function getCurrentRoomId() {
+        // Try to get room ID from current context
+        const roomCards = document.querySelectorAll('.room-card');
+        if (roomCards.length > 0) {
+            // Return the first room ID as fallback
+            const firstCard = roomCards[0];
+            const roomLink = firstCard.querySelector('.room-link');
+            if (roomLink) {
+                const href = roomLink.getAttribute('href');
+                const match = href.match(/\/room\/([^\/]+)\//);
+                return match ? match[1] : null;
+            }
+        }
+        return null;
+    }
+    
+    // Enhanced preset management
+    function loadLayoutPresetFromServer(presetName) {
+        fetch('/api/layout/presets')
+            .then(response => response.json())
+            .then(result => {
+                if (result.success && result.data[presetName]) {
+                    const preset = result.data[presetName];
+                    applyPresetToForm(preset);
+                    showNotification(`Loaded preset: ${preset.name}`, 'success');
+                } else {
+                    showNotification('Preset not found', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading preset:', error);
+                showNotification('Error loading preset', 'error');
+            });
+    }
+    
+    function applyPresetToForm(preset) {
+        if (!preset.layout) return;
+        
+        const layout = preset.layout;
+        
+        // Switch to appropriate tab based on layout type
+        if (layout.type) {
+            const targetTab = document.querySelector(`[data-layout="${layout.type}"]`);
+            if (targetTab) {
+                targetTab.click();
+            }
+        }
+        
+        // Apply preset configuration to form fields
+        if (layout.grid) {
+            const templateField = document.getElementById('default-grid-template');
+            const gapField = document.getElementById('default-gap-size');
+            
+            if (templateField && layout.grid.template) {
+                templateField.value = layout.grid.template;
+            }
+            if (gapField && layout.grid.gap) {
+                const gapValue = layout.grid.gap.replace('px', '');
+                gapField.value = gapValue;
+                const gapDisplay = document.getElementById('default-gap-value');
+                if (gapDisplay) {
+                    gapDisplay.textContent = layout.grid.gap;
+                }
+            }
+        }
+        
+        if (layout.flex) {
+            const directionField = document.getElementById('mobile-stack-direction');
+            const breakpointField = document.getElementById('mobile-breakpoint');
+            
+            if (directionField && layout.flex.direction) {
+                directionField.value = layout.flex.direction;
+            }
+            if (breakpointField && layout.flex.breakpoint) {
+                breakpointField.value = layout.flex.breakpoint;
+            }
+        }
+        
+        // Update preview
+        updateLayoutPreviewInRealTime();
+    }
+    
+    // Initialize enhanced layout controls
+    initializeEnhancedLayoutControls();
+    
+    // Global flag for live preview
+    window.layoutLivePreviewEnabled = true;
+});
+// Theme preview functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const previewThemeBtn = document.getElementById('preview-theme-btn');
+    const applyThemeBtn = document.getElementById('apply-theme-btn');
+    const themePreviewModal = document.getElementById('theme-preview-modal');
+    const closePreviewModal = document.getElementById('close-preview-modal');
+    const closePreviewBtn = document.getElementById('close-preview-btn');
+    const applyPreviewThemeBtn = document.getElementById('apply-preview-theme-btn');
+    const themePreviewContent = document.getElementById('theme-preview-content');
+    
+    if (previewThemeBtn) {
+        previewThemeBtn.addEventListener('click', function() {
+            const themeManager = window.themeManager;
+            const currentTheme = themeManager.getCurrentTheme();
+            const theme = themeManager.getTheme(currentTheme);
+            
+            if (theme) {
+                showThemePreview(theme);
+            }
+        });
+    }
+    
+    if (applyThemeBtn) {
+        applyThemeBtn.addEventListener('click', function() {
+            const themeManager = window.themeManager;
+            const currentTheme = themeManager.getCurrentTheme();
+            
+            // Show confirmation dialog
+            if (confirm(`Are you sure you want to apply the "${themeManager.getTheme(currentTheme).name}" theme to all rooms?`)) {
+                // Apply theme to all rooms (this would typically involve an API call)
+                applyThemeToAllRooms(currentTheme);
+                
+                // Show success notification
+                showNotification('Theme applied to all rooms successfully!', 'success');
+            }
+        });
+    }
+    
+    if (closePreviewModal) {
+        closePreviewModal.addEventListener('click', closeThemePreview);
+    }
+    
+    if (closePreviewBtn) {
+        closePreviewBtn.addEventListener('click', closeThemePreview);
+    }
+    
+    if (applyPreviewThemeBtn) {
+        applyPreviewThemeBtn.addEventListener('click', function() {
+            const themeManager = window.themeManager;
+            const currentTheme = themeManager.getCurrentTheme();
+            
+            // Apply theme to all rooms
+            applyThemeToAllRooms(currentTheme);
+            
+            // Close preview
+            closeThemePreview();
+            
+            // Show success notification
+            showNotification('Theme applied to all rooms successfully!', 'success');
+        });
+    }
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        if (event.target === themePreviewModal) {
+            closeThemePreview();
+        }
+    });
+    
+    function showThemePreview(theme) {
+        const themePreviewModal = document.getElementById('theme-preview-modal');
+        const themePreviewContent = document.getElementById('theme-preview-content');
+        
+        // Create preview content
+        const previewHTML = `
+            <div class="theme-preview-container" style="background: var(--bg-dark); color: var(--text-light); padding: 2rem; border-radius: var(--border-radius);">
+                <h3 style="margin-top: 0; background: var(--player-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                    ${theme.name} Theme Preview
+                </h3>
+                <p style="color: var(--text-muted); margin-bottom: 2rem;">${theme.description}</p>
+                
+                <div class="preview-section" style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--accent-color); margin-bottom: 1rem;">Color Palette</h4>
+                    <div class="color-palette" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        ${Object.entries(theme.colors).map(([key, value]) => `
+                            <div class="color-swatch" style="text-align: center;">
+                                <div class="color-box" style="width: 60px; height: 60px; background: ${value}; border-radius: 8px; margin-bottom: 0.5rem; border: 2px solid rgba(255,255,255,0.1);"></div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">${key.replace('-', ' ')}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="preview-section" style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--accent-color); margin-bottom: 1rem;">UI Elements</h4>
+                    <div class="ui-elements" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button class="nav-button" style="background: var(--player-primary); color: var(--text-light); border: none; padding: 0.8rem 1.5rem; border-radius: 30px; cursor: pointer; font-weight: 600;">Primary Button</button>
+                        <button class="nav-button secondary" style="background: var(--bg-medium); color: var(--text-muted); border: none; padding: 0.8rem 1.5rem; border-radius: 30px; cursor: pointer; font-weight: 600;">Secondary Button</button>
+                        <div class="state-card" style="background: var(--bg-card); backdrop-filter: blur(10px); border-radius: var(--border-radius); padding: 1rem; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: var(--shadow);">
+                            <div style="color: var(--accent-color); font-weight: 600;">Sample Card</div>
+                            <div style="color: var(--text-muted); font-size: 0.9rem;">This is a sample card with the theme applied</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="preview-section">
+                    <h4 style="color: var(--accent-color); margin-bottom: 1rem;">Typography</h4>
+                    <div class="typography-samples">
+                        <h1 style="margin: 0 0 0.5rem 0; color: var(--text-light);">Heading 1</h1>
+                        <h2 style="margin: 0 0 0.5rem 0; color: var(--text-light);">Heading 2</h2>
+                        <p style="margin: 0 0 1rem 0; color: var(--text-light);">This is a paragraph of text with the theme colors applied. It demonstrates how readable the text is with the selected color scheme.</p>
+                        <p style="margin: 0; color: var(--text-muted);">This is muted text for secondary information.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        themePreviewContent.innerHTML = previewHTML;
+        themePreviewModal.style.display = 'block';
+        
+        // Apply the theme to the preview content
+        const themeManager = window.themeManager;
+        themeManager.applyTheme(themeManager.getCurrentTheme());
+    }
+    
+    function closeThemePreview() {
+        const themePreviewModal = document.getElementById('theme-preview-modal');
+        themePreviewModal.style.display = 'none';
+    }
+    
+    function applyThemeToAllRooms(themeName) {
+        // This function would typically make an API call to apply the theme to all rooms
+        // For now, we'll just save it to localStorage and show a notification
+        localStorage.setItem('quandary-global-theme', themeName);
+        
+        // In a real implementation, this would be an API call like:
+        // fetch('/api/theme/global', {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify({ theme: themeName })
+        // });
+    }
+    
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? 'var(--player-primary)' : 'var(--bg-medium)'};
+            color: var(--text-light);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Remove notification after 3 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    }
 });

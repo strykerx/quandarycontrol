@@ -2,9 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#667eea">
     <title>Quandary Control - Modern Player View</title>
     <link rel="stylesheet" href="/styles.css">
+    <script src="/theme-manager.js"></script>
+    <script src="/layout-validator.js"></script>
     <style>
         /* Modern, Bold Player Interface Styles */
         :root {
@@ -227,24 +232,8 @@
             color: var(--text-muted);
         }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-
-            .room-title {
-                font-size: 2.5rem;
-            }
-
-            .game-state-section {
-                grid-template-columns: 1fr;
-            }
-
-            .timer-display {
-                font-size: 4rem;
-            }
-        }
+        /* Basic responsive styles are now handled in styles.css */
+        /* Keeping only player-specific overrides here */
 
         /* Animations */
         @keyframes fadeInUp {
@@ -412,7 +401,7 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="player-container">
         <header class="header">
             <h1 class="room-title" id="room-title">Quandary Control</h1>
             <p class="room-subtitle">Interactive Player Experience</p>
@@ -427,7 +416,7 @@
                 <div class="timer-label">Time Remaining</div>
             </section>
 
-            <section class="game-state-section" id="game-state-section">
+            <section class="game-state-section state-section" id="game-state-section">
                 <div class="state-card">
                     <h3>Variables</h3>
                     <div class="state-content" id="variable-display">
@@ -470,6 +459,9 @@
             </button>
             <button class="nav-button" onclick="requestUpdate()">
                 Refresh Status
+            </button>
+            <button class="nav-button" id="start-rules-button">
+                Start Rules Slideshow
             </button>
         </nav>
     </div>

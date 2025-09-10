@@ -1,0 +1,148 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TV Layout Configuration Schema",
+  "description": "Schema for TV-optimized escape room layouts",
+  "type": "object",
+  "required": ["version", "layouts", "breakpoints"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "1.0.0"
+    },
+    "layouts": {
+      "type": "object",
+      "properties": {
+        "default": {
+          "type": "object",
+          "required": ["type", "grid", "components"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["grid"]
+            },
+            "grid": {
+              "type": "object",
+              "required": ["columns", "rows", "gap", "templateAreas"],
+              "properties": {
+                "columns": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12
+                },
+                "rows": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12
+                },
+                "gap": {
+                  "type": ["string", "number"]
+                },
+                "templateAreas": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "components": {
+              "type": "object",
+              "required": ["timer", "gameState", "hints", "navigation"],
+              "properties": {
+                "timer": {"$ref": "#/definitions/component"},
+                "gameState": {"$ref": "#/definitions/component"},
+                "hints": {"$ref": "#/definitions/component"},
+                "navigation": {"$ref": "#/definitions/component"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "breakpoints": {
+      "type": "object",
+      "properties": {
+        "tv": {
+          "type": "object",
+          "required": ["minWidth"],
+          "properties": {
+            "minWidth": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "presets": {
+      "type": "object",
+      "properties": {
+        "tv-optimized": {
+          "type": "object",
+          "required": ["name", "description", "layout"],
+          "properties": {
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "layout": {"$ref": "#/definitions/layout"}
+          }
+        }
+      }
+    },
+    "animations": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "duration": {"type": "integer"},
+        "easing": {"type": "string"}
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "properties": {
+        "focusManagement": {"type": "boolean"},
+        "keyboardNavigation": {"type": "boolean"},
+        "screenReaderOptimized": {"type": "boolean"}
+      }
+    }
+  },
+  "definitions": {
+    "component": {
+      "type": "object",
+      "required": ["visible", "order", "position"],
+      "properties": {
+        "visible": {"type": "boolean"},
+        "order": {"type": "integer"},
+        "position": {
+          "type": "object",
+          "required": ["gridRow", "gridColumn"],
+          "properties": {
+            "gridRow": {"type": "string"},
+            "gridColumn": {"type": "string"}
+          }
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "required": ["type", "grid"],
+      "properties": {
+        "type": {"type": "string", "enum": ["grid"]},
+        "grid": {"$ref": "#/definitions/gridConfig"}
+      }
+    },
+    "gridConfig": {
+      "type": "object",
+      "required": ["columns", "rows", "gap", "templateAreas"],
+      "properties": {
+        "columns": {"type": "integer"},
+        "rows": {"type": "integer"},
+        "gap": {"type": ["string", "number"]},
+        "templateAreas": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    }
+  }
+}

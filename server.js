@@ -71,6 +71,16 @@ app.get('/room/:roomId/gm', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'gm.html'));
 });
 
+// Rules editor route
+app.get('/room/:roomId/rules-editor', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'rules-editor.html'));
+});
+
+// Rules slideshow route
+app.get('/room/:roomId/rules-slideshow', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'rules-slideshow.html'));
+});
+
 // Static files should come after specific routes
 app.use(express.static('public'));
 
@@ -257,6 +267,103 @@ io.on('connection', (socket) => {
       autoCloseEnabled,
       autoCloseSeconds
     });
+  });
+
+  // Layout preview and configuration handlers
+  socket.on('layout_preview', ({ roomId, layout, source }) => {
+    if (!roomId || !layout) {
+      return socket.emit('error', 'Invalid layout preview parameters');
+    }
+
+    console.log('Layout preview requested for room:', roomId, 'from:', source);
+    
+    // Broadcast layout preview to all clients in the room except sender
+    socket.to(roomId).emit('layout_preview', {
+      layout,
+      source: source || 'admin',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  socket.on('apply_layout', ({ roomId, layout }) => {
+    if (!roomId || !layout) {
+      return socket.emit('error', 'Invalid layout application parameters');
+    }
+
+    console.log('Layout application requested for room:', roomId);
+    
+    // Broadcast layout update to all clients in the room
+    io.to(roomId).emit('layout_updated', {
+      layout,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Admin-specific room joining for layout management
+  socket.on('join_admin', ({ roomId }) => {
+    if (!roomId) {
+      return socket.emit('error', 'Invalid admin join parameters');
+    }
+
+    socket.join(`admin_${roomId}`);
+    console.log(`Admin joined room ${roomId} for management`);
+    
+    // Send current room configuration to admin
+    try {
+      const db = getDatabase();
+      const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(roomId);
+      
+      if (room) {
+        let config = {};
+        try {
+          config = JSON.parse(room.config || '{}');
+        } catch (e) {
+          config = {};
+        }
+        
+        socket.emit('room_config', {
+          roomId,
+          config,
+          layout: config.layout || {}
+        });
+      }
+    } catch (error) {
+      console.error('Error sending room config to admin:', error);
+    }
+  });
+
+  // Layout validation request
+  socket.on('validate_layout', ({ layout }) => {
+    if (!layout) {
+      return socket.emit('error', 'Layout configuration required for validation');
+    }
+
+    // Basic validation - in production this would use the full schema validator
+    const result = {
+      valid: true,
+      errors: []
+    };
+
+    try {
+      // Check for required layouts object
+      if (!layout.layouts || typeof layout.layouts !== 'object') {
+        result.valid = false;
+        result.errors.push('Layout configuration must contain a "layouts" object');
+      }
+
+      // Check for default layout
+      if (layout.layouts && !layout.layouts.default) {
+        result.valid = false;
+        result.errors.push('Layout configuration must contain a "default" layout');
+      }
+
+      socket.emit('layout_validation_result', result);
+    } catch (error) {
+      socket.emit('layout_validation_result', {
+        valid: false,
+        errors: [`Validation error: ${error.message}`]
+      });
+    }
   });
 
   socket.on('disconnect', () => {

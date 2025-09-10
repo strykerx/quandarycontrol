@@ -390,7 +390,7 @@ class FormManager {
         this.isDirty = false;
     }
 
-    registerField(fieldName, initialValue = '', rules = []) {
+    registerField(fieldName, initialValue = '', rules = [], options = {}) {
         this.formState[fieldName] = {
             value: initialValue,
             initialValue: initialValue,

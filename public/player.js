@@ -646,4 +646,670 @@ window.playerApp = {
     getCurrentRoomId: () => roomId,
     getVariables: () => ({...variables}),
     getHints: () => [...hints]
+  };
+  
+  // Rules Slideshow functionality
+  document.getElementById('start-rules-button').addEventListener('click', () => {
+    if (roomId) {
+      window.open(`/room/${roomId}/rules-slideshow`, 'rules-slideshow', 'width=100%,height=100%,scrollbars=no');
+    } else {
+      alert('No room ID found. Please make sure you are in a valid room.');
+    }
+  });
+// Theme management for player page
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for theme manager to be ready
+    window.addEventListener('themeManagerReady', function(e) {
+        const themeManager = window.themeManager;
+        
+        // Initialize theme for player page
+        initializePlayerTheme(themeManager);
+        
+        // Listen for theme changes from admin
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'quandary-global-theme') {
+                const newTheme = e.newValue;
+                if (newTheme && themeManager) {
+                    themeManager.applyTheme(newTheme);
+                }
+            }
+        });
+        
+        // Check for global theme in localStorage
+        const globalTheme = localStorage.getItem('quandary-global-theme');
+        if (globalTheme && themeManager) {
+            themeManager.applyTheme(globalTheme);
+        }
+    });
+});
+
+function initializePlayerTheme(themeManager) {
+    // Apply current theme to player page
+    themeManager.applyTheme(themeManager.getCurrentTheme());
+    
+    // Add theme-specific classes to body for better component styling
+    const currentTheme = themeManager.getCurrentTheme();
+    document.body.classList.add(`theme-${currentTheme}`);
+    
+    // Update CSS custom properties for theme colors
+    updateThemeCSSVariables(themeManager.getTheme(currentTheme));
+}
+
+function updateThemeCSSVariables(theme) {
+    if (!theme || !theme.colors) return;
+    
+    const root = document.documentElement;
+    
+    // Update CSS custom properties with theme colors
+    Object.entries(theme.colors).forEach(([key, value]) => {
+        const cssVarName = `--${key}`;
+        root.style.setProperty(cssVarName, value);
+    });
+    
+    // Update gradient variables if they exist in the theme
+    if (theme.gradients) {
+        Object.entries(theme.gradients).forEach(([key, value]) => {
+            const cssVarName = `--${key}`;
+            root.style.setProperty(cssVarName, value);
+        });
+    }
+    
+    // Update other theme properties
+    if (theme.borderRadius) {
+        root.style.setProperty('--border-radius', theme.borderRadius);
+    }
+    
+    if (theme.shadow) {
+        root.style.setProperty('--shadow', theme.shadow);
+    }
+    
+    if (theme.shadowGlow) {
+        root.style.setProperty('--shadow-glow', theme.shadowGlow);
+    }
+}
+
+// Function to handle theme changes
+function handleThemeChange(newThemeName) {
+    const themeManager = window.themeManager;
+    if (!themeManager) return;
+    
+    // Remove old theme class
+    document.body.classList.remove(`theme-${themeManager.getCurrentTheme()}`);
+    
+    // Apply new theme
+    themeManager.applyTheme(newThemeName);
+    
+    // Add new theme class
+    document.body.classList.add(`theme-${newThemeName}`);
+    
+    // Update CSS variables
+    updateThemeCSSVariables(themeManager.getTheme(newThemeName));
+    
+    // Show theme change notification (optional)
+    showThemeChangeNotification(themeManager.getTheme(newThemeName));
+}
+
+function showThemeChangeNotification(theme) {
+    if (!theme) return;
+    
+    // Create a subtle notification
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--bg-medium);
+        color: var(--text-light);
+        padding: 0.8rem 1.5rem;
+        border-radius: 30px;
+        box-shadow: var(--shadow);
+        z-index: 1000;
+        animation: slideUp 0.3s ease-out;
+        font-size: 0.9rem;
+        opacity: 0.9;
+    `;
+    notification.textContent = `Theme changed to ${theme.name}`;
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideDown 0.3s ease-out';
+        setTimeout(() => {
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Add slide animations for theme notifications
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideUp {
+        from {
+            transform: translate(-50%, 100%);
+            opacity: 0;
+        }
+        to {
+            transform: translate(-50%, 0);
+            opacity: 0.9;
+        }
+    }
+    
+    @keyframes slideDown {
+        from {
+            transform: translate(-50%, 0);
+            opacity: 0.9;
+        }
+        to {
+            transform: translate(-50%, 100%);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+
+// Export theme functions for global access
+window.playerTheme = {
+    handleThemeChange,
+    updateThemeCSSVariables,
+    getCurrentTheme: () => {
+        const themeManager = window.themeManager;
+        return themeManager ? themeManager.getCurrentTheme() : 'default';
+    }
 };
+
+// Layout Management for Player Interface
+class PlayerLayoutManager {
+    constructor(containerId = 'player-container') {
+        this.currentLayout = 'default';
+        this.layoutConfig = null;
+        this.container = document.getElementById(containerId) || document.querySelector('.container');
+        this.initialized = false;
+        this.resizeHandler = null;
+        
+        this.initialize();
+    }
+    
+    initialize() {
+        if (this.initialized) return;
+        
+        // Load layout configuration from localStorage or server
+        this.loadLayoutConfiguration();
+        
+        // Apply the current layout
+        this.applyLayout(this.currentLayout);
+        
+        // Listen for layout changes
+        this.setupLayoutChangeListeners();
+        
+        this.initialized = true;
+        console.log(`PlayerLayoutManager initialized with layout: ${this.currentLayout}`);
+    }
+    
+    loadLayoutConfiguration() {
+        try {
+            // Try to load from localStorage first
+            const savedConfig = localStorage.getItem('quandary-layout-config');
+            if (savedConfig) {
+                const config = JSON.parse(savedConfig);
+                this.currentLayout = config.preset || 'default';
+                this.layoutConfig = config.config || null;
+            } else {
+                // Fallback to default layout
+                this.currentLayout = 'default';
+                this.layoutConfig = this.getDefaultLayoutConfig('default');
+            }
+        } catch (error) {
+            console.error('Error loading layout configuration:', error);
+            this.currentLayout = 'default';
+            this.layoutConfig = this.getDefaultLayoutConfig('default');
+        }
+    }
+    
+    getDefaultLayoutConfig(layoutType) {
+        const defaultConfigs = {
+            default: {
+                type: 'grid',
+                template: '1fr 2fr',
+                gap: '10px',
+                containerClass: 'layout-default'
+            },
+            mobile: {
+                type: 'flex',
+                direction: 'column',
+                breakpoint: '768px',
+                containerClass: 'layout-mobile'
+            },
+            compact: {
+                type: 'compact',
+                spacing: '8px',
+                hideNonEssential: true,
+                containerClass: 'layout-compact'
+            }
+        };
+        
+        return defaultConfigs[layoutType] || defaultConfigs.default;
+    }
+    
+    applyLayout(layoutType) {
+        if (!this.container) return;
+        
+        // Remove all layout classes
+        this.container.classList.remove('layout-default', 'layout-mobile', 'layout-compact', 'layout-custom');
+        
+        // Add the new layout class
+        this.container.classList.add(`layout-${layoutType}`);
+        
+        // Apply specific layout styles
+        this.applyLayoutStyles(layoutType);
+        
+        // Reorganize DOM elements based on layout
+        this.reorganizeElements(layoutType);
+        
+        // Update responsive behavior
+        this.updateResponsiveBehavior(layoutType);
+        
+        console.log(`Applied layout: ${layoutType}`);
+    }
+    
+    applyLayoutStyles(layoutType) {
+        const config = this.layoutConfig || this.getDefaultLayoutConfig(layoutType);
+        
+        // Remove existing layout styles
+        const existingStyles = document.getElementById('dynamic-layout-styles');
+        if (existingStyles) {
+            existingStyles.remove();
+        }
+        
+        // Create new style element
+        const style = document.createElement('style');
+        style.id = 'dynamic-layout-styles';
+        
+        let styles = '';
+        
+        switch (layoutType) {
+            case 'default':
+                styles = this.generateGridLayoutStyles(config);
+                break;
+            case 'mobile':
+                styles = this.generateMobileLayoutStyles(config);
+                break;
+            case 'compact':
+                styles = this.generateCompactLayoutStyles(config);
+                break;
+            case 'custom':
+                styles = this.generateCustomLayoutStyles(config);
+                break;
+        }
+        
+        style.textContent = styles;
+        document.head.appendChild(style);
+    }
+    
+    generateGridLayoutStyles(config) {
+        return `
+            .layout-default {
+                display: grid;
+                grid-template-columns: ${config.template || '1fr 2fr'};
+                gap: ${config.gap || 'var(--spacing-md, 10px)'};
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: var(--spacing-xl, 2rem);
+            }
+            
+            .layout-default .timer-section {
+                grid-column: 1 / -1;
+                margin-bottom: var(--spacing-md, 1rem);
+            }
+            
+            .layout-default .state-section {
+                grid-column: 1;
+            }
+            
+            .layout-default .hints-section {
+                grid-column: 2;
+            }
+            
+            @media (max-width: 768px) {
+                .layout-default {
+                    grid-template-columns: 1fr;
+                    padding: var(--spacing-md, 1rem);
+                }
+                
+                .layout-default .timer-section,
+                .layout-default .state-section,
+                .layout-default .hints-section {
+                    grid-column: 1;
+                }
+            }
+        `;
+    }
+    
+    generateMobileLayoutStyles(config) {
+        return `
+            .layout-mobile {
+                display: flex;
+                flex-direction: ${config.direction || 'column'};
+                gap: var(--spacing-md, 1rem);
+                max-width: 100%;
+                margin: 0 auto;
+                padding: var(--spacing-md, 1rem);
+            }
+            
+            .layout-mobile .timer-section {
+                order: 1;
+                margin-bottom: var(--spacing-md, 1rem);
+            }
+            
+            .layout-mobile .state-section {
+                order: 2;
+                flex: 1;
+            }
+            
+            .layout-mobile .hints-section {
+                order: 3;
+                flex: 1;
+            }
+            
+            @media (min-width: ${config.breakpoint || '768px'}) {
+                .layout-mobile {
+                    flex-direction: row;
+                    padding: var(--spacing-xl, 2rem);
+                }
+                
+                .layout-mobile .timer-section {
+                    order: 1;
+                    flex: 0 0 100%;
+                    margin-bottom: var(--spacing-xl, 2rem);
+                }
+                
+                .layout-mobile .state-section {
+                    order: 2;
+                    flex: 1;
+                }
+                
+                .layout-mobile .hints-section {
+                    order: 3;
+                    flex: 1;
+                }
+            }
+        `;
+    }
+    
+    generateCompactLayoutStyles(config) {
+        return `
+            .layout-compact {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: ${config.spacing || 'var(--spacing-sm, 8px)'};
+                max-width: 800px;
+                margin: 0 auto;
+                padding: var(--spacing-md, 1rem);
+            }
+            
+            .layout-compact .timer-section {
+                margin-bottom: var(--spacing-sm, 0.5rem);
+                padding: var(--spacing-md, 1rem);
+            }
+            
+            .layout-compact .state-section {
+                margin-bottom: var(--spacing-sm, 0.5rem);
+            }
+            
+            .layout-compact .hints-section {
+                margin-bottom: var(--spacing-sm, 0.5rem);
+            }
+            
+            .layout-compact .timer-display {
+                font-size: var(--font-size-4xl, 4rem);
+            }
+            
+            .layout-compact .room-title {
+                font-size: var(--font-size-3xl, 2rem);
+            }
+            
+            ${config.hideNonEssential ? `
+                .layout-compact .status-badges {
+                    display: none;
+                }
+                
+                .layout-compact .room-info {
+                    display: none;
+                }
+            ` : ''}
+            
+            @media (max-width: 640px) {
+                .layout-compact {
+                    padding: var(--spacing-sm, 0.5rem);
+                    gap: calc(${config.spacing || 'var(--spacing-sm, 8px)'} * 0.75);
+                }
+                
+                .layout-compact .timer-display {
+                    font-size: var(--font-size-3xl, 3rem);
+                }
+                
+                .layout-compact .room-title {
+                    font-size: var(--font-size-2xl, 1.5rem);
+                }
+            }
+        `;
+    }
+    
+    generateCustomLayoutStyles(config) {
+        // For custom layouts, try to parse the configuration
+        if (config.layouts && config.layouts.default) {
+            const defaultLayout = config.layouts.default;
+            let styles = '.layout-custom { ';
+            
+            if (defaultLayout.grid) {
+                styles += `display: grid; `;
+                styles += `grid-template-columns: ${defaultLayout.grid.template || '1fr 2fr'}; `;
+                styles += `gap: ${defaultLayout.grid.gap || 'var(--spacing-md, 10px)'}; `;
+            } else if (defaultLayout.flex) {
+                styles += `display: flex; `;
+                styles += `flex-direction: ${defaultLayout.flex.direction || 'column'}; `;
+                if (defaultLayout.flex.gap) styles += `gap: ${defaultLayout.flex.gap}; `;
+            }
+            
+            styles += 'max-width: 1200px; margin: 0 auto; padding: var(--spacing-xl, 2rem); }';
+            
+            // Add responsive styles if defined
+            if (config.layouts.mobile) {
+                const mobileLayout = config.layouts.mobile;
+                styles += '@media (max-width: 768px) { .layout-custom { ';
+                
+                if (mobileLayout.grid) {
+                    styles += `grid-template-columns: ${mobileLayout.grid.template || '1fr'}; `;
+                    styles += `gap: ${mobileLayout.grid.gap || 'var(--spacing-sm, 8px)'}; `;
+                } else if (mobileLayout.flex) {
+                    styles += `flex-direction: ${mobileLayout.flex.direction || 'column'}; `;
+                }
+                
+                styles += 'padding: var(--spacing-md, 1rem); } }';
+            }
+            
+            return styles;
+        }
+        
+        // Fallback to default styles
+        return this.generateGridLayoutStyles(this.getDefaultLayoutConfig('default'));
+    }
+    
+    reorganizeElements(layoutType) {
+        const container = this.container;
+        if (!container) return;
+        
+        // Get all main sections
+        const timerSection = document.querySelector('.timer-section');
+        const stateSection = document.querySelector('.state-section');
+        const hintsSection = document.querySelector('.hints-section');
+        const chatSection = document.querySelector('.chat-section');
+        
+        // Create a wrapper for better organization if needed
+        if (!container.querySelector('.layout-wrapper')) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'layout-wrapper';
+            
+            // Move existing content into wrapper
+            while (container.firstChild) {
+                wrapper.appendChild(container.firstChild);
+            }
+            
+            container.appendChild(wrapper);
+        }
+        
+        const wrapper = container.querySelector('.layout-wrapper');
+        
+        // Clear wrapper
+        wrapper.innerHTML = '';
+        
+        // Reorganize based on layout type
+        switch (layoutType) {
+            case 'default':
+                if (timerSection) wrapper.appendChild(timerSection);
+                if (stateSection) wrapper.appendChild(stateSection);
+                if (hintsSection) wrapper.appendChild(hintsSection);
+                if (chatSection) wrapper.appendChild(chatSection);
+                break;
+                
+            case 'mobile':
+                if (timerSection) wrapper.appendChild(timerSection);
+                if (stateSection) wrapper.appendChild(stateSection);
+                if (hintsSection) wrapper.appendChild(hintsSection);
+                if (chatSection) wrapper.appendChild(chatSection);
+                break;
+                
+            case 'compact':
+                if (timerSection) wrapper.appendChild(timerSection);
+                if (stateSection) wrapper.appendChild(stateSection);
+                if (hintsSection) wrapper.appendChild(hintsSection);
+                if (chatSection) wrapper.appendChild(chatSection);
+                break;
+                
+            case 'custom':
+                // For custom layouts, maintain original order but apply custom styling
+                if (timerSection) wrapper.appendChild(timerSection);
+                if (stateSection) wrapper.appendChild(stateSection);
+                if (hintsSection) wrapper.appendChild(hintsSection);
+                if (chatSection) wrapper.appendChild(chatSection);
+                break;
+        }
+    }
+    
+    updateResponsiveBehavior(layoutType) {
+        // Add responsive event listeners if needed
+        const handleResize = () => {
+            const width = window.innerWidth;
+            
+            // Update layout based on screen size for certain layout types
+            if (layoutType === 'mobile' || layoutType === 'default') {
+                this.applyResponsiveStyles(width, layoutType);
+            }
+        };
+        
+        // Remove existing listener
+        window.removeEventListener('resize', this.resizeHandler);
+        
+        // Add new listener
+        this.resizeHandler = handleResize;
+        window.addEventListener('resize', this.resizeHandler);
+        
+        // Initial call
+        handleResize();
+    }
+    
+    applyResponsiveStyles(width, layoutType) {
+        const container = this.container;
+        if (!container) return;
+        
+        // Apply responsive classes based on width
+        container.classList.remove('mobile-view', 'tablet-view', 'desktop-view');
+        
+        if (width < 640) {
+            container.classList.add('mobile-view');
+        } else if (width < 1024) {
+            container.classList.add('tablet-view');
+        } else {
+            container.classList.add('desktop-view');
+        }
+    }
+    
+    setupLayoutChangeListeners() {
+        // Listen for storage changes (from admin)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'quandary-layout-config') {
+                try {
+                    const newConfig = JSON.parse(e.newValue);
+                    this.currentLayout = newConfig.preset || 'default';
+                    this.layoutConfig = newConfig.config || null;
+                    this.applyLayout(this.currentLayout);
+                } catch (error) {
+                    console.error('Error handling layout change:', error);
+                }
+            }
+        });
+        
+        // Listen for custom layout change events
+        window.addEventListener('layoutChange', (e) => {
+            const { layoutType, config } = e.detail;
+            this.currentLayout = layoutType;
+            this.layoutConfig = config;
+            this.applyLayout(layoutType);
+        });
+    }
+    
+    // Public methods
+    getCurrentLayout() {
+        return this.currentLayout;
+    }
+    
+    getLayoutConfig() {
+        return this.layoutConfig;
+    }
+    
+    setLayout(layoutType, config = null) {
+        this.currentLayout = layoutType;
+        this.layoutConfig = config || this.getDefaultLayoutConfig(layoutType);
+        this.applyLayout(layoutType);
+        
+        // Save to localStorage
+        localStorage.setItem('quandary-layout-config', JSON.stringify({
+            preset: layoutType,
+            config: this.layoutConfig,
+            timestamp: Date.now()
+        }));
+    }
+}
+
+// Initialize layout manager when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for existing initialization to complete and theme manager to be ready
+    setTimeout(() => {
+        // Initialize layout manager with the container ID
+        window.playerLayoutManager = new PlayerLayoutManager('player-container');
+        
+        // Make layout manager globally accessible
+        window.playerApp = window.playerApp || {};
+        window.playerApp.layoutManager = window.playerLayoutManager;
+        
+        // Listen for theme changes and update layout accordingly
+        if (window.themeManager) {
+            window.addEventListener('themeChanged', (event) => {
+                console.log('Theme changed, updating layout styles');
+                // Reapply current layout with new theme
+                if (window.playerLayoutManager) {
+                    const currentLayout = window.playerLayoutManager.getCurrentLayout();
+                    const layoutConfig = window.playerLayoutManager.getLayoutConfig();
+                    window.playerLayoutManager.applyLayout(currentLayout, layoutConfig);
+                }
+            });
+        }
+        
+        console.log('Player layout manager initialized');
+    }, 200);
+});
+
+// Export for global access
+window.PlayerLayoutManager = PlayerLayoutManager;

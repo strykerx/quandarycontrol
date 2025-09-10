@@ -1,0 +1,86 @@
+{
+  "version": "1.0.0",
+  "layouts": {
+    "default": {
+      "type": "grid",
+      "grid": {
+        "columns": 12,
+        "rows": 3,
+        "gap": "1rem",
+        "templateAreas": [
+          "timer timer timer timer timer timer timer timer timer timer timer timer",
+          "gameState gameState gameState gameState hints hints hints hints navigation navigation navigation navigation",
+          "navigation navigation navigation navigation navigation navigation navigation navigation navigation navigation navigation navigation"
+        ]
+      },
+      "components": {
+        "timer": {
+          "visible": true,
+          "order": 1,
+          "position": {
+            "gridRow": "1",
+            "gridColumn": "1 / -1"
+          }
+        },
+        "gameState": {
+          "visible": true,
+          "order": 2,
+          "position": {
+            "gridRow": "2",
+            "gridColumn": "1 / 5"
+          }
+        },
+        "hints": {
+          "visible": true,
+          "order": 3,
+          "position": {
+            "gridRow": "2",
+            "gridColumn": "5 / 9"
+          }
+        },
+        "navigation": {
+          "visible": true,
+          "order": 4,
+          "position": {
+            "gridRow": "3",
+            "gridColumn": "1 / -1"
+          }
+        }
+      }
+    }
+  },
+  "breakpoints": {
+    "tv": {
+      "minWidth": 0
+    }
+  },
+  "presets": {
+    "tv-optimized": {
+      "name": "TV Optimized",
+      "description": "Large screen layout for escape room displays",
+      "layout": {
+        "type": "grid",
+        "grid": {
+          "columns": 12,
+          "rows": 3,
+          "gap": "1rem",
+          "templateAreas": [
+            "timer timer timer timer timer timer timer timer timer timer timer timer",
+            "gameState gameState gameState gameState hints hints hints hints navigation navigation navigation navigation",
+            "navigation navigation navigation navigation navigation navigation navigation navigation navigation navigation navigation navigation"
+          ]
+        }
+      }
+    }
+  },
+  "animations": {
+    "enabled": true,
+    "duration": 300,
+    "easing": "ease-in-out"
+  },
+  "accessibility": {
+    "focusManagement": true,
+    "keyboardNavigation": true,
+    "screenReaderOptimized": true
+  }
+}

@@ -457,3 +457,12 @@ async function fetchHintConfigAndToggle() {
     if (chatSection) chatSection.style.display = 'none';
   }
 }
+
+// Rules Editor functionality
+document.getElementById('edit-rules-button').addEventListener('click', () => {
+  if (roomId) {
+    window.open(`/room/${roomId}/rules-editor`, 'rules-editor', 'width=1200,height=800,scrollbars=yes');
+  } else {
+    alert('No room ID found. Please make sure you are in a valid room.');
+  }
+});

@@ -448,7 +448,7 @@ router.post('/rooms/:roomId/variables/:varName', (req, res) => {
 });
 
 /**
- * Get rules configuration for a room
+ * Get rules for a room
  */
 router.get('/rooms/:id/rules', (req, res) => {
   try {
@@ -460,33 +460,153 @@ router.get('/rooms/:id/rules', (req, res) => {
       return res.status(404).json({ success: false, error: 'Room not found' });
     }
 
-    let rules = [];
-    try {
-      rules = JSON.parse(room.rules_config || '[]');
-    } catch (e) {
-      console.warn(`Invalid JSON in rules_config for room ${id}:`, e);
-      rules = [];
-    }
+    // Fetch all media and filter to metadata.category === 'rules'
+    const rows = db.prepare(`
+      SELECT * FROM room_media
+      WHERE room_id = ?
+      ORDER BY order_index ASC, created_at ASC
+    `).all(id);
 
-    res.json({ success: true, data: rules });
+    const rules = rows.filter(r => {
+      try {
+        const m = JSON.parse(r.metadata || '{}');
+        return m.category === 'rules';
+      } catch (_) { return false; }
+    });
+
+    const data = rules.map(rule => ({
+      ...rule,
+      metadata: JSON.parse(rule.metadata || '{}')
+    }));
+
+    res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 /**
- * Update rules configuration for a room
+ * Upload rules media for a room
  */
-router.put('/rooms/:id/rules', (req, res) => {
+router.post('/rooms/:id/rules', upload.single('media'), (req, res) => {
   try {
     const { id } = req.params;
-    const { rules } = req.body;
 
-    if (!Array.isArray(rules)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Rules configuration must be an array'
-      });
+    const db = getDatabase();
+    const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id);
+    if (!room) {
+      return res.status(404).json({ success: false, error: 'Room not found' });
+    }
+
+    // Multipart upload path (file sent as "media")
+    if (req.file) {
+      const { filename, mimetype, originalname = '', size = 0 } = req.file;
+
+      // Map to existing CHECK(type IN ('image','video','audio','other'))
+      let assetType = 'other';
+      if (mimetype && typeof mimetype === 'string') {
+        if (mimetype.startsWith('image/')) assetType = 'image';
+        else if (mimetype.startsWith('video/')) assetType = 'video';
+        else if (mimetype.startsWith('audio/')) assetType = 'audio';
+      }
+
+      // Compute next order_index among only "rules" category items
+      const allRows = db.prepare('SELECT id, metadata, order_index FROM room_media WHERE room_id = ?').all(id);
+      let maxIdx = -1;
+      for (const r of allRows) {
+        try {
+          const m = JSON.parse(r.metadata || '{}');
+          if (m.category === 'rules' && typeof r.order_index === 'number') {
+            if (r.order_index > maxIdx) maxIdx = r.order_index;
+          }
+        } catch (_) {}
+      }
+      const indexToUse = maxIdx + 1;
+
+      const mediaId = nanoid();
+      const url = `/uploads/${filename}`;
+      const title = (req.body && req.body.title) ? req.body.title : (originalname || '');
+      const thumbnail_url = '';
+      const meta = {
+        originalname,
+        mimetype,
+        size,
+        uploaded_at: new Date().toISOString(),
+        category: 'rules'
+      };
+
+      db.prepare(`
+        INSERT INTO room_media (id, room_id, type, title, url, thumbnail_url, metadata, order_index)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        mediaId,
+        id,
+        assetType,
+        title,
+        url,
+        thumbnail_url,
+        JSON.stringify(meta),
+        indexToUse
+      );
+
+      const created = db.prepare('SELECT * FROM room_media WHERE id = ?').get(mediaId);
+      const data = {
+        ...created,
+        metadata: JSON.parse(created.metadata || '{}')
+      };
+      
+      return res.status(201).json({ success: true, data });
+    }
+
+    return res.status(400).json({ success: false, error: 'No file uploaded' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Delete a rule
+ */
+router.delete('/rooms/:id/rules/:ruleId', (req, res) => {
+  try {
+    const { id, ruleId } = req.params;
+    const db = getDatabase();
+
+    const existing = db.prepare('SELECT * FROM room_media WHERE id = ? AND room_id = ?').get(ruleId, id);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Rule not found' });
+    }
+    // Ensure this media item is a "rules" item
+    let metaOk = false;
+    try {
+      const m = JSON.parse(existing.metadata || '{}');
+      metaOk = m.category === 'rules';
+    } catch (_) { metaOk = false; }
+    if (!metaOk) {
+      return res.status(404).json({ success: false, error: 'Rule not found' });
+    }
+
+    const result = db.prepare('DELETE FROM room_media WHERE id = ? AND room_id = ?').run(ruleId, id);
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'Rule not found' });
+    }
+
+    res.json({ success: true, message: 'Rule deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Update rules order
+ */
+router.post('/rooms/:id/rules/order', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ruleIds } = req.body;
+
+    if (!Array.isArray(ruleIds)) {
+      return res.status(400).json({ success: false, error: 'ruleIds must be an array' });
     }
 
     const db = getDatabase();
@@ -495,10 +615,47 @@ router.put('/rooms/:id/rules', (req, res) => {
       return res.status(404).json({ success: false, error: 'Room not found' });
     }
 
-    const updateStmt = db.prepare('UPDATE rooms SET rules_config = ? WHERE id = ?');
-    updateStmt.run(JSON.stringify(rules), id);
+    // Verify all rule IDs belong to this room and are category 'rules'
+    if (ruleIds.length > 0) {
+      const placeholders = ruleIds.map(() => '?').join(',');
+      const rows = db.prepare(`SELECT id, metadata FROM room_media WHERE room_id = ? AND id IN (${placeholders})`).all(id, ...ruleIds);
+      if (rows.length !== ruleIds.length) {
+        return res.status(400).json({ success: false, error: 'One or more items do not belong to the room' });
+      }
+      const allRules = rows.every(r => {
+        try { return JSON.parse(r.metadata || '{}').category === 'rules'; } catch (_) { return false; }
+      });
+      if (!allRules) {
+        return res.status(400).json({ success: false, error: 'One or more items are not rules media' });
+      }
+    }
 
-    res.json({ success: true, data: rules });
+    // Update order for each rule
+    const tx = db.transaction((updates) => {
+      const stmt = db.prepare('UPDATE room_media SET order_index = ? WHERE id = ?');
+      updates.forEach((ruleId, index) => {
+        stmt.run(index, ruleId);
+      });
+    });
+    tx(ruleIds);
+
+    // Return updated rules list
+    const rowsAll = db.prepare(`
+      SELECT * FROM room_media
+      WHERE room_id = ?
+      ORDER BY order_index ASC, created_at ASC
+    `).all(id);
+
+    const rules = rowsAll.filter(r => {
+      try { return JSON.parse(r.metadata || '{}').category === 'rules'; } catch (_) { return false; }
+    });
+
+    const data = rules.map(rule => ({
+      ...rule,
+      metadata: JSON.parse(rule.metadata || '{}')
+    }));
+
+    res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -1057,6 +1214,152 @@ router.delete('/lightbox/:sequenceId', (req, res) => {
     }
 
     res.json({ success: true, message: 'Lightbox sequence deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Layout Configuration API Endpoints
+ */
+
+/**
+ * Get layout configuration for a room
+ */
+router.get('/rooms/:id/layout', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id);
+    if (!room) {
+      return res.status(404).json({ success: false, error: 'Room not found' });
+    }
+
+    let layoutConfig = {};
+    try {
+      const config = JSON.parse(room.config || '{}');
+      layoutConfig = config.layout || {};
+    } catch (e) {
+      console.warn(`Invalid JSON in config for room ${id}:`, e);
+      layoutConfig = {};
+    }
+
+    res.json({ success: true, data: layoutConfig });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Update layout configuration for a room
+ */
+router.put('/rooms/:id/layout', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { layout } = req.body;
+
+    if (!layout || typeof layout !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Layout configuration must be an object'
+      });
+    }
+
+    const db = getDatabase();
+    const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id);
+    if (!room) {
+      return res.status(404).json({ success: false, error: 'Room not found' });
+    }
+
+    // Parse current config and update layout
+    let config = {};
+    try {
+      config = JSON.parse(room.config || '{}');
+    } catch (e) {
+      console.warn(`Invalid JSON in config for room ${id}:`, e);
+      config = {};
+    }
+
+    config.layout = layout;
+
+    const updateStmt = db.prepare('UPDATE rooms SET config = ? WHERE id = ?');
+    updateStmt.run(JSON.stringify(config), id);
+
+    // Broadcast layout update via Socket.IO if available
+    try {
+      const { io } = require('../server');
+      io.to(id).emit('layout_updated', {
+        layout: layout,
+        timestamp: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn('Socket.IO not available for layout broadcast');
+    }
+
+    res.json({ success: true, data: layout });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Validate layout configuration against schema
+ */
+router.post('/layout/validate', (req, res) => {
+  try {
+    const { layout } = req.body;
+
+    if (!layout) {
+      return res.status(400).json({
+        success: false,
+        error: 'Layout configuration is required'
+      });
+    }
+
+    // Basic validation - in a real implementation, this would use the layout validator
+    const result = {
+      valid: true,
+      errors: []
+    };
+
+    // Check for required layouts object
+    if (!layout.layouts || typeof layout.layouts !== 'object') {
+      result.valid = false;
+      result.errors.push('Layout configuration must contain a "layouts" object');
+    }
+
+    // Check for default layout
+    if (layout.layouts && !layout.layouts.default) {
+      result.valid = false;
+      result.errors.push('Layout configuration must contain a "default" layout');
+    }
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Get layout presets
+ */
+router.get('/layout/presets', (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Load presets from layout-config.json
+    const configPath = path.join(__dirname, '..', 'config', 'layout-config.json');
+    
+    if (!fs.existsSync(configPath)) {
+      return res.json({ success: true, data: {} });
+    }
+
+    const configData = fs.readFileSync(configPath, 'utf8');
+    const config = JSON.parse(configData);
+    
+    res.json({ success: true, data: config.presets || {} });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

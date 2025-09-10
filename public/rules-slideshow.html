@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rules Slideshow - Quandary Control</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        /* Slideshow Specific Styles */
+        .slideshow-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            display: flex;
+            flex-direction: column;
+            z-index: 9999;
+        }
+
+        .slideshow-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem 2rem;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slideshow-title {
+            color: var(--text-light);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .slideshow-counter {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .slideshow-main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .slide.active {
+            opacity: 1;
+        }
+
+        .slide-media {
+            max-width: 90%;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .slide-media.video {
+            background: #000;
+        }
+
+        .slideshow-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 2rem;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .nav-arrow {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-light);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-arrow:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--player-primary);
+            transform: scale(1.1);
+        }
+
+        .nav-arrow:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .nav-arrow:disabled:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1);
+        }
+
+        .slide-indicators {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .indicator.active {
+            background: var(--player-primary);
+            transform: scale(1.2);
+        }
+
+        .close-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-light);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+            z-index: 20;
+            backdrop-filter: blur(10px);
+        }
+
+        .close-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--player-accent);
+            transform: scale(1.1);
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        .error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--player-accent);
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        .completion-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-light);
+            z-index: 15;
+        }
+
+        .completion-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: var(--player-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .completion-text {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .continue-button {
+            background: var(--player-primary);
+            color: var(--text-light);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .continue-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        @media (max-width: 768px) {
+            .slideshow-header {
+                padding: 0.75rem 1rem;
+            }
+
+            .slideshow-title {
+                font-size: 1.2rem;
+            }
+
+            .slideshow-counter {
+                font-size: 0.9rem;
+            }
+
+            .nav-arrow {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .slideshow-controls {
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .close-button {
+                width: 35px;
+                height: 35px;
+                font-size: 1rem;
+            }
+
+            .completion-title {
+                font-size: 2rem;
+            }
+
+            .completion-text {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slideshow-container">
+        <header class="slideshow-header">
+            <h1 class="slideshow-title">Game Rules</h1>
+            <div class="slideshow-counter">
+                <span id="current-slide">1</span> / <span id="total-slides">1</span>
+            </div>
+        </header>
+
+        <main class="slideshow-main" id="slideshow-main">
+            <div class="loading" id="loading">Loading rules...</div>
+            <div class="error" id="error" style="display: none;">
+                <p>No rules found</p>
+                <p>Please ask the game master to upload rules first</p>
+            </div>
+        </main>
+
+        <div class="completion-message" id="completion-message" style="display: none;">
+            <h2 class="completion-title">Rules Complete!</h2>
+            <p class="completion-text">You've reviewed all the game rules</p>
+            <button class="continue-button" id="continue-to-game">Continue to Game</button>
+        </div>
+
+        <nav class="slideshow-controls" id="slideshow-controls" style="display: none;">
+            <button class="nav-arrow" id="prev-slide">‹</button>
+            <div class="slide-indicators" id="slide-indicators"></div>
+            <button class="nav-arrow" id="next-slide">›</button>
+        </nav>
+
+        <button class="close-button" id="close-slideshow">×</button>
+    </div>
+
+    <script src="/rules-slideshow.js"></script>
+</body>
+</html>

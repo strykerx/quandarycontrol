@@ -1,15 +1,172 @@
 :root {
-    --player-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* Theme Colors - Default Theme */
+    --primary-color: #667eea;
+    --primary-color-dark: #5a67d8;
+    --secondary-color: #764ba2;
+    --accent-color: #ff6b6b;
+    --accent-color-light: #ff8e8e;
+    
+    /* Gradient Definitions */
+    --player-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     --player-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --player-accent: #ff6b6b;
+    
+    /* Background Colors */
     --bg-dark: #0a0a0a;
     --bg-medium: #1a1a1a;
     --bg-light: #2a2a2a;
+    --bg-card: rgba(255, 255, 255, 0.05);
+    --bg-overlay: rgba(0, 0, 0, 0.75);
+    
+    /* Text Colors */
     --text-light: #ffffff;
     --text-muted: #b3b3b3;
+    --text-dark: #2d3436;
+    --text-secondary: #636e72;
+    
+    /* UI Elements */
     --border-radius: 12px;
+    --border-radius-small: 8px;
+    --border-radius-large: 20px;
+    
+    /* Shadows */
     --shadow: 0 8px 32px rgba(0,0,0,0.3);
     --shadow-glow: 0 0 20px rgba(102, 126, 234, 0.2);
+    --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.15);
+    
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* Font Sizes */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 2rem;
+    --font-size-4xl: 3rem;
+    
+    /* Font Weights */
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    
+    /* Z-Index */
+    --z-dropdown: 1000;
+    --z-modal: 1000;
+    --z-tooltip: 1070;
+    --z-lightbox: 9999;
+    
+    /* Opacity */
+    --opacity-disabled: 0.6;
+    --opacity-hover: 0.8;
+    
+    /* Animation */
+    --animation-duration-fast: 0.2s;
+    --animation-duration-normal: 0.3s;
+    --animation-duration-slow: 0.5s;
+}
+
+/* Fallback values for legacy browsers */
+body {
+    background-color: #0a0a0a; /* Fallback for --bg-dark */
+    color: #ffffff; /* Fallback for --text-light */
+}
+
+/* Enhanced fallback values for IE11 and other legacy browsers */
+.state-card {
+    background-color: #1a1a1a; /* Fallback for --bg-card */
+    border-radius: 12px; /* Fallback for --border-radius */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3); /* Fallback for --shadow */
+}
+
+.nav-button {
+    background-color: #667eea; /* Fallback for --player-primary */
+    color: #ffffff; /* Fallback for --text-light */
+    border-radius: 30px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3); /* Fallback for --shadow */
+}
+
+.nav-button:hover {
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.2); /* Fallback for --shadow-glow */
+}
+
+/* Fallback for backdrop-filter (not supported in IE11) */
+@supports not (backdrop-filter: blur(10px)) {
+    .state-card {
+        background-color: rgba(26, 26, 26, 0.9); /* Darker fallback for browsers without backdrop-filter */
+    }
+}
+
+/* Fallback for CSS custom properties in IE11 */
+.room-title {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* IE11 specific fallbacks */
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+    .room-title {
+        color: #667eea; /* Fallback for gradient text in IE11 */
+        background: none;
+    }
+    
+    .nav-button {
+        background-color: #667eea; /* Solid color fallback */
+    }
+    
+    .btn-confirm {
+        background-color: #f093fb; /* Solid color fallback */
+    }
+    
+    .state-card {
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+    }
+}
+
+/* Fallback for CSS Grid in older browsers */
+@supports not (display: grid) {
+    .media-gallery {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    
+    .media-item {
+        flex: 0 0 calc(33.333% - 1rem);
+        margin: 0.5rem;
+    }
+}
+
+/* Fallback for CSS variables in older browsers */
+:root {
+    /* Fallback values for browsers that don't support CSS variables */
+    --player-primary-fallback: #667eea;
+    --player-secondary-fallback: #f093fb;
+    --player-accent-fallback: #ff6b6b;
+    --bg-dark-fallback: #0a0a0a;
+    --bg-medium-fallback: #1a1a1a;
+    --bg-light-fallback: #2a2a2a;
+    --bg-card-fallback: #1a1a1a;
+    --text-light-fallback: #ffffff;
+    --text-muted-fallback: #b3b3b3;
+    --border-radius-fallback: 12px;
+    --shadow-fallback: 0 8px 32px rgba(0,0,0,0.3);
+    --shadow-glow-fallback: 0 0 20px rgba(102, 126, 234, 0.2);
 }
 
 body {
@@ -70,6 +227,21 @@ body {
 .nav-button:hover {
     transform: translateY(-3px);
     box-shadow: var(--shadow-glow);
+}
+
+/* Rules buttons */
+#edit-rules-button {
+    background: linear-gradient(135deg, #48bb78 0%, #2f855a 100%);
+}
+
+#start-rules-button {
+    background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+}
+
+#edit-rules-button:hover,
+#start-rules-button:hover {
+    filter: brightness(1.15);
+    transform: translateY(-2px);
 }
 
 /* GM-specific overrides */
@@ -258,4 +430,626 @@ body {
 .btn-show-lightbox:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-glow);
+}
+/* Theme change notification animations */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* ===== RESPONSIVE DESIGN SYSTEM ===== */
+/* Mobile-first approach with 3 breakpoints */
+
+/* Base styles (Mobile: 0-767px) */
+/* Default styles above are mobile-first */
+
+/* Touch-friendly controls for mobile */
+.nav-button,
+.btn-upload,
+.btn-confirm,
+.btn-select-media,
+.btn-show-lightbox {
+    min-height: 44px; /* iOS/Android recommended touch target */
+    min-width: 44px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    transition: all var(--transition-normal);
+}
+
+/* Mobile-specific container adjustments */
+.container {
+    padding: 1rem;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Mobile typography */
+.room-title {
+    font-size: 2rem;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+}
+
+.room-subtitle {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Mobile timer display */
+.timer-display {
+    font-size: 3.5rem;
+    margin-bottom: 0.75rem;
+}
+
+/* Mobile state cards */
+.state-card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.state-content {
+    gap: 0.375rem;
+}
+
+.state-item {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    min-width: auto;
+    flex: 1 1 auto;
+}
+
+/* Mobile game state section */
+.game-state-section {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Mobile hints section */
+.hint-card {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* Mobile navigation */
+.nav-section {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
+.nav-button {
+    width: 100%;
+    text-align: center;
+    margin: 0;
+}
+
+/* Mobile status badges */
+.status-badges {
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+/* Mobile media gallery */
+.media-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.75rem;
+    max-height: 250px;
+}
+
+.media-thumbnail {
+    height: 80px;
+}
+
+/* Mobile lightbox adjustments */
+.lightbox-content {
+    max-width: 95vw;
+    max-height: 95vh;
+    margin: 0.5rem;
+}
+
+.lightbox-header {
+    padding: 0.75rem 1rem;
+}
+
+.lightbox-header h2 {
+    font-size: 1.25rem;
+}
+
+.lightbox-close {
+    width: 36px;
+    height: 36px;
+    font-size: 1.5rem;
+}
+
+/* Mobile chat section */
+.chat-input-row {
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.chat-input-row .form-input {
+    margin-bottom: 0.5rem;
+}
+
+/* Orientation-aware layouts for mobile */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+    .container {
+        padding: 0.5rem;
+    }
+    
+    .header {
+        margin-bottom: 1rem;
+    }
+    
+    .room-title {
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .timer-section {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .timer-display {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .game-state-section {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    
+    .state-card {
+        padding: 0.75rem;
+    }
+    
+    .nav-section {
+        margin-top: 1rem;
+        flex-direction: row;
+        justify-content: center;
+        gap: 1rem;
+    }
+    
+    .nav-button {
+        width: auto;
+        flex: 0 1 auto;
+    }
+}
+
+/* ===== TABLET BREAKPOINT (768px - 1023px) ===== */
+@media screen and (min-width: 768px) {
+    /* Container adjustments */
+    .container {
+        max-width: 750px;
+        padding: 1.5rem;
+        margin: 0 auto;
+    }
+    
+    /* Typography scaling */
+    .room-title {
+        font-size: 2.75rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .room-subtitle {
+        font-size: 1.125rem;
+        margin-bottom: 2rem;
+    }
+    
+    /* Timer display */
+    .timer-display {
+        font-size: 5rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* State cards layout */
+    .game-state-section {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+    
+    .state-card {
+        padding: 1.25rem;
+    }
+    
+    .state-item {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Navigation layout */
+    .nav-section {
+        flex-direction: row;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .nav-button {
+        width: auto;
+        min-width: 150px;
+        padding: 1rem 1.75rem;
+        font-size: 1.05rem;
+    }
+    
+    /* Status badges */
+    .status-badges {
+        flex-direction: row;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    /* Media gallery */
+    .media-gallery {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem;
+        max-height: 280px;
+    }
+    
+    .media-thumbnail {
+        height: 90px;
+    }
+    
+    /* Chat layout */
+    .chat-input-row {
+        flex-direction: row;
+        gap: 0.75rem;
+    }
+    
+    .chat-input-row .form-input {
+        margin-bottom: 0;
+    }
+    
+    /* Touch targets remain accessible but can be slightly smaller */
+    .nav-button,
+    .btn-upload,
+    .btn-confirm,
+    .btn-select-media,
+    .btn-show-lightbox {
+        min-height: 40px;
+        min-width: 40px;
+    }
+    
+    /* Tablet landscape orientation */
+    @media screen and (orientation: landscape) {
+        .game-state-section {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+        
+        .hints-section {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    }
+}
+
+/* ===== DESKTOP BREAKPOINT (1024px+) ===== */
+@media screen and (min-width: 1024px) {
+    /* Container adjustments */
+    .container {
+        max-width: 1000px;
+        padding: 2rem;
+    }
+    
+    /* Typography scaling */
+    .room-title {
+        font-size: 3.25rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .room-subtitle {
+        font-size: 1.25rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    /* Timer display */
+    .timer-display {
+        font-size: 6rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    /* Advanced grid layout for desktop */
+    .game-state-section {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .state-card {
+        padding: 1.5rem;
+    }
+    
+    .state-item {
+        padding: 0.5rem 1rem;
+        font-size: 0.95rem;
+    }
+    
+    /* Navigation enhancements */
+    .nav-section {
+        gap: 1.5rem;
+        margin-top: 2.5rem;
+    }
+    
+    .nav-button {
+        min-width: 180px;
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+    }
+    
+    /* Hover effects for desktop */
+    .nav-button:hover,
+    .btn-upload:hover,
+    .btn-confirm:hover,
+    .btn-select-media:hover,
+    .btn-show-lightbox:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-glow);
+    }
+    
+    .state-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    }
+    
+    /* Media gallery desktop layout */
+    .media-gallery {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1.25rem;
+        max-height: 320px;
+    }
+    
+    .media-thumbnail {
+        height: 100px;
+    }
+    
+    /* Desktop-specific lightbox */
+    .lightbox-content {
+        max-width: 85vw;
+        max-height: 85vh;
+    }
+    
+    .lightbox-header h2 {
+        font-size: 1.75rem;
+    }
+    
+    /* Touch targets can be standard size on desktop */
+    .nav-button,
+    .btn-upload,
+    .btn-confirm,
+    .btn-select-media,
+    .btn-show-lightbox {
+        min-height: 36px;
+        min-width: 36px;
+    }
+}
+
+/* ===== LARGE DESKTOP BREAKPOINT (1200px+) ===== */
+@media screen and (min-width: 1200px) {
+    .container {
+        max-width: 1200px;
+        padding: 2.5rem;
+    }
+    
+    .room-title {
+        font-size: 3.5rem;
+    }
+    
+    .timer-display {
+        font-size: 6.5rem;
+    }
+    
+    .game-state-section {
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+        gap: 2rem;
+    }
+    
+    .nav-button {
+        min-width: 200px;
+        padding: 1.25rem 2.5rem;
+        font-size: 1.15rem;
+    }
+}
+
+/* ===== ACCESSIBILITY & MOTION PREFERENCES ===== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .timer-display {
+        animation: none !important;
+    }
+    
+    .nav-button:hover,
+    .state-card:hover {
+        transform: none !important;
+    }
+}
+
+/* ===== HIGH CONTRAST MODE ===== */
+@media (prefers-contrast: high) {
+    .state-card {
+        border: 2px solid var(--text-light);
+        background: var(--bg-dark);
+    }
+    
+    .nav-button {
+        border: 2px solid var(--text-light);
+    }
+    
+    .status-badge {
+        border: 1px solid var(--text-light);
+    }
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+    .nav-section,
+    .lightbox,
+    .hint-overlay {
+        display: none !important;
+    }
+    
+    .container {
+        max-width: none;
+        padding: 1rem;
+    }
+    
+    .timer-section,
+    .game-state-section,
+    .hints-section {
+        break-inside: avoid;
+        margin-bottom: 1rem;
+    }
+    
+    .state-card {
+        border: 1px solid #000;
+        background: #fff;
+        color: #000;
+    }
+}
+
+/* ===== UTILITY CLASSES FOR RESPONSIVE BEHAVIOR ===== */
+.mobile-only {
+    display: block;
+}
+
+.tablet-up {
+    display: none;
+}
+
+.desktop-only {
+    display: none;
+}
+
+@media screen and (min-width: 768px) {
+    .mobile-only {
+        display: none;
+    }
+    
+    .tablet-up {
+        display: block;
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .desktop-only {
+        display: block;
+    }
+}
+
+/* ===== RESPONSIVE IMAGES & MEDIA ===== */
+img,
+video {
+    max-width: 100%;
+    height: auto;
+}
+
+.media-thumbnail {
+    object-fit: cover;
+    width: 100%;
+}
+
+/* ===== RESPONSIVE TYPOGRAPHY ===== */
+@media screen and (min-width: 768px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    html {
+        font-size: 17px;
+    }
+}
+
+@media screen and (min-width: 1200px) {
+    html {
+        font-size: 18px;
+    }
+}
+
+/* ===== FOCUS MANAGEMENT FOR ACCESSIBILITY ===== */
+.nav-button:focus,
+.btn-upload:focus,
+.btn-confirm:focus,
+.btn-select-media:focus,
+.btn-show-lightbox:focus,
+#chat-input:focus,
+#lightbox-headline:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* ===== RESPONSIVE SPACING SYSTEM ===== */
+@media screen and (max-width: 767px) {
+    :root {
+        --spacing-xs: 0.125rem;
+        --spacing-sm: 0.25rem;
+        --spacing-md: 0.5rem;
+        --spacing-lg: 0.75rem;
+        --spacing-xl: 1rem;
+        --spacing-2xl: 1.5rem;
+    }
+}
+
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+    :root {
+        --spacing-xs: 0.1875rem;
+        --spacing-sm: 0.375rem;
+        --spacing-md: 0.75rem;
+        --spacing-lg: 1.125rem;
+        --spacing-xl: 1.5rem;
+        --spacing-2xl: 2.25rem;
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    :root {
+        --spacing-xs: 0.25rem;
+        --spacing-sm: 0.5rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        --spacing-2xl: 3rem;
+    }
 }

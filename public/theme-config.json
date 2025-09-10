@@ -1,0 +1,121 @@
+{
+  "themes": {
+    "default": {
+      "name": "Default Purple",
+      "description": "The original purple gradient theme",
+      "colors": {
+        "primary-color": "#667eea",
+        "primary-color-dark": "#5a67d8",
+        "secondary-color": "#764ba2",
+        "accent-color": "#ff6b6b",
+        "accent-color-light": "#ff8e8e",
+        "bg-dark": "#0a0a0a",
+        "bg-medium": "#1a1a1a",
+        "bg-light": "#2a2a2a",
+        "text-light": "#ffffff",
+        "text-muted": "#b3b3b3",
+        "text-dark": "#2d3436",
+        "text-secondary": "#636e72"
+      },
+      "gradients": {
+        "player-primary": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        "player-secondary": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
+      }
+    },
+    "ocean": {
+      "name": "Ocean Blue",
+      "description": "Calming blue ocean theme",
+      "colors": {
+        "primary-color": "#0077be",
+        "primary-color-dark": "#005a8a",
+        "secondary-color": "#00a8cc",
+        "accent-color": "#00d4aa",
+        "accent-color-light": "#4dd9c7",
+        "bg-dark": "#001f3f",
+        "bg-medium": "#003366",
+        "bg-light": "#004080",
+        "text-light": "#ffffff",
+        "text-muted": "#b3d9ff",
+        "text-dark": "#001f3f",
+        "text-secondary": "#4d79a4"
+      },
+      "gradients": {
+        "player-primary": "linear-gradient(135deg, #0077be 0%, #00a8cc 100%)",
+        "player-secondary": "linear-gradient(135deg, #00d4aa 0%, #4dd9c7 100%)"
+      }
+    },
+    "forest": {
+      "name": "Forest Green",
+      "description": "Natural green forest theme",
+      "colors": {
+        "primary-color": "#2d6a4f",
+        "primary-color-dark": "#1b5e3f",
+        "secondary-color": "#40916c",
+        "accent-color": "#52b788",
+        "accent-color-light": "#74c69d",
+        "bg-dark": "#081c15",
+        "bg-medium": "#1b4332",
+        "bg-light": "#2d6a4f",
+        "text-light": "#ffffff",
+        "text-muted": "#b7e4c7",
+        "text-dark": "#081c15",
+        "text-secondary": "#40916c"
+      },
+      "gradients": {
+        "player-primary": "linear-gradient(135deg, #2d6a4f 0%, #40916c 100%)",
+        "player-secondary": "linear-gradient(135deg, #52b788 0%, #74c69d 100%)"
+      }
+    },
+    "sunset": {
+      "name": "Sunset Orange",
+      "description": "Warm sunset orange theme",
+      "colors": {
+        "primary-color": "#f77f00",
+        "primary-color-dark": "#d62828",
+        "secondary-color": "#fcbf49",
+        "accent-color": "#eae2b7",
+        "accent-color-light": "#f2e8cf",
+        "bg-dark": "#2b2d42",
+        "bg-medium": "#3d405b",
+        "bg-light": "#5c5f7a",
+        "text-light": "#ffffff",
+        "text-muted": "#f2e8cf",
+        "text-dark": "#2b2d42",
+        "text-secondary": "#8d99ae"
+      },
+      "gradients": {
+        "player-primary": "linear-gradient(135deg, #f77f00 0%, #fcbf49 100%)",
+        "player-secondary": "linear-gradient(135deg, #d62828 0%, #eae2b7 100%)"
+      }
+    },
+    "midnight": {
+      "name": "Midnight Dark",
+      "description": "Dark midnight blue theme",
+      "colors": {
+        "primary-color": "#7209b7",
+        "primary-color-dark": "#560bad",
+        "secondary-color": "#3a0ca3",
+        "accent-color": "#4361ee",
+        "accent-color-light": "#4895ef",
+        "bg-dark": "#000000",
+        "bg-medium": "#0a0a0a",
+        "bg-light": "#1a1a1a",
+        "text-light": "#ffffff",
+        "text-muted": "#b8b8b8",
+        "text-dark": "#000000",
+        "text-secondary": "#808080"
+      },
+      "gradients": {
+        "player-primary": "linear-gradient(135deg, #7209b7 0%, #3a0ca3 100%)",
+        "player-secondary": "linear-gradient(135deg, #4361ee 0%, #4895ef 100%)"
+      }
+    }
+  },
+  "settings": {
+    "defaultTheme": "default",
+    "enableThemeSwitching": true,
+    "enableLivePreview": true,
+    "persistThemeChoice": true,
+    "fallbackSupport": true
+  }
+}

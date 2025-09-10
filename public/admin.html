@@ -6,6 +6,8 @@
     <title>Quandary Admin - Room Management</title>
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="/admin.css">
+    <script src="/theme-manager.js"></script>
+    <script src="/layout-validator.js"></script>
 </head>
 <body>
     <nav class="navigation">
@@ -20,24 +22,6 @@
     <div class="admin-container">
         <div class="actions-header">
             <button class="btn-primary" id="create-room-btn">Create New Room</button>
-            <div class="control-group" style="margin-top: 1rem;">
-                <h3>Global Display Controls</h3>
-                <div class="form-row">
-                    <label>Auto-close:
-                        <input type="checkbox" id="autoCloseToggle" checked
-                            onchange="adminApp.toggleAutoClose(this.checked)">
-                    </label>
-                    <label>Duration (sec):
-                        <select id="autoCloseSeconds" onchange="adminApp.setAutoCloseSeconds(this.value)">
-                            <option value="5">5</option>
-                            <option value="10">10</option>
-                            <option value="15">15</option>
-                            <option value="0">Manual</option>
-                        </select>
-                    </label>
-                </div>
-                <button onclick="adminApp.sendLightboxCommand()">Show Lightbox</button>
-            </div>
         </div>
 
         <div id="room-grid" class="room-grid">
@@ -403,7 +387,130 @@
         </div>
     </div>
 
+    <!-- Layout Management Modal -->
+    <div id="layout-modal" class="modal">
+        <div class="modal-content layout-modal-content">
+            <div class="modal-header">
+                <h2>🎨 Layout Configuration Manager</h2>
+                <button class="close-btn" id="close-layout-modal">&times;</button>
+            </div>
+
+            <div class="layout-modal-body">
+                <div class="layout-tabs">
+                    <button class="layout-tab active" data-layout="default">Default</button>
+                    <button class="layout-tab" data-layout="mobile">Mobile</button>
+                    <button class="layout-tab" data-layout="compact">Compact</button>
+                    <button class="layout-tab" data-layout="custom">Custom</button>
+                </div>
+
+                <div class="layout-content">
+                    <div id="default-layout" class="layout-section active">
+                        <h3>Default Grid Layout</h3>
+                        <div class="layout-preview" id="default-preview">
+                            <!-- Preview will be generated here -->
+                        </div>
+                        <div class="layout-config">
+                            <h4>Configuration</h4>
+                            <div class="config-group">
+                                <label>Grid Template:
+                                    <select id="default-grid-template" class="form-input">
+                                        <option value="1fr 2fr">Sidebar + Main</option>
+                                        <option value="1fr 1fr 1fr">Three Column</option>
+                                        <option value="2fr 1fr">Main + Sidebar</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="config-group">
+                                <label>Gap Size:
+                                    <input type="range" id="default-gap-size" min="0" max="20" value="10" class="form-input">
+                                    <span id="default-gap-value">10px</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="mobile-layout" class="layout-section">
+                        <h3>Mobile Optimized Layout</h3>
+                        <div class="layout-preview" id="mobile-preview">
+                            <!-- Preview will be generated here -->
+                        </div>
+                        <div class="layout-config">
+                            <h4>Configuration</h4>
+                            <div class="config-group">
+                                <label>Stack Direction:
+                                    <select id="mobile-stack-direction" class="form-input">
+                                        <option value="column">Vertical</option>
+                                        <option value="column-reverse">Vertical Reverse</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="config-group">
+                                <label>Responsive Breakpoint:
+                                    <select id="mobile-breakpoint" class="form-input">
+                                        <option value="768px">Tablet (768px)</option>
+                                        <option value="640px">Mobile (640px)</option>
+                                        <option value="480px">Small Mobile (480px)</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="compact-layout" class="layout-section">
+                        <h3>Compact Layout</h3>
+                        <div class="layout-preview" id="compact-preview">
+                            <!-- Preview will be generated here -->
+                        </div>
+                        <div class="layout-config">
+                            <h4>Configuration</h4>
+                            <div class="config-group">
+                                <label>Component Spacing:
+                                    <input type="range" id="compact-spacing" min="4" max="16" value="8" class="form-input">
+                                    <span id="compact-spacing-value">8px</span>
+                                </label>
+                            </div>
+                            <div class="config-group">
+                                <label>Hide Non-essential:
+                                    <input type="checkbox" id="compact-hide-nonessential" checked>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="custom-layout" class="layout-section">
+                        <h3>Custom Layout</h3>
+                        <div class="layout-preview" id="custom-preview">
+                            <!-- Preview will be generated here -->
+                        </div>
+                        <div class="layout-config">
+                            <h4>JSON Configuration</h4>
+                            <div class="config-group">
+                                <label>Layout JSON:
+                                    <textarea id="custom-layout-json" class="form-input" rows="10" placeholder='{"layouts": {...}}'></textarea>
+                                </label>
+                            </div>
+                            <div class="config-group">
+                                <button id="validate-layout-btn" class="btn-secondary">Validate Layout</button>
+                                <button id="load-preset-btn" class="btn-secondary">Load Preset</button>
+                            </div>
+                            <div id="layout-validation-results" class="validation-results">
+                                <!-- Validation results will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layout-actions">
+                <button type="button" class="btn-secondary" id="cancel-layout-btn">Cancel</button>
+                <button type="button" class="btn-primary" id="save-layout-btn">Save Layout</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
     <script src="/ui-state.js"></script>
     <script src="/admin.js"></script>
+    <script src="/admin-layout-controls.js"></script>
 </body>
 </html>
