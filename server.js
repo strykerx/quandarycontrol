@@ -135,7 +135,7 @@ app.use('/themes', express.static('themes'));
 app.use(express.static('public'));
 
 // API routes
-const { router } = require('./routes/api');
+const { router, checkAndExecuteTriggers } = require('./routes/api');
 app.use('/api', router);
 app.use('/api/templates', require('./api/template-routes'));
 
@@ -329,6 +329,45 @@ function executeTimerTriggerAction(roomId, trigger, remainingSeconds) {
   }
 }
 
+// Helper function to update timer variables and check triggers
+async function updateTimerVariables(roomId, timerType, remaining, duration, io) {
+  try {
+    // Get room data to access api_variables
+    const room = db.prepare('SELECT api_variables FROM rooms WHERE id = ?').get(roomId);
+    if (!room) return;
+
+    let apiVariables = {};
+    try {
+      apiVariables = JSON.parse(room.api_variables || '{}');
+    } catch (e) {
+      console.error('Error parsing api_variables:', e);
+      return;
+    }
+
+    // Update timer variables
+    const timerVariableName = timerType === 'main' ? 'timer_main' : 'timer_secondary';
+    const remainingVariableName = timerType === 'main' ? 'timer_main_remaining' : 'timer_secondary_remaining';
+    
+    // Calculate elapsed seconds from start of timer
+    const elapsed = duration - remaining;
+    
+    // Update variables
+    apiVariables[timerVariableName] = { type: 'number', value: elapsed, system: true };
+    apiVariables[remainingVariableName] = { type: 'number', value: remaining, system: true };
+    
+    // Save updated variables to database
+    const updateStmt = db.prepare('UPDATE rooms SET api_variables = ? WHERE id = ?');
+    updateStmt.run(JSON.stringify(apiVariables), roomId);
+    
+    // Check for triggers on the timer variables
+    await checkAndExecuteTriggers(roomId, timerVariableName, elapsed, io);
+    await checkAndExecuteTriggers(roomId, remainingVariableName, remaining, io);
+    
+  } catch (error) {
+    console.error('Error updating timer variables:', error);
+  }
+}
+
 io.on('connection', (socket) => {
   console.log('New client connected');
 
@@ -404,7 +443,7 @@ io.on('connection', (socket) => {
       case 'start':
         if (!timer.interval) {
           timer.startTime = Date.now() - (timer.duration - timer.remaining) * 1000;
-          timer.interval = setInterval(() => {
+          timer.interval = setInterval(async () => {
             const elapsed = Math.floor((Date.now() - timer.startTime) / 1000);
             timer.remaining = Math.max(timer.duration - elapsed, 0);
             
@@ -413,6 +452,9 @@ io.on('connection', (socket) => {
               duration: timer.duration,
               running: true
             });
+            
+            // Update timer variables and check triggers
+            await updateTimerVariables(roomId, 'main', timer.remaining, timer.duration, io);
 
             if (timer.remaining <= 0) {
               clearInterval(timer.interval);
@@ -479,7 +521,7 @@ io.on('connection', (socket) => {
       case 'start':
         if (!timer.interval) {
           timer.startTime = Date.now() - (timer.duration - timer.remaining) * 1000;
-          timer.interval = setInterval(() => {
+          timer.interval = setInterval(async () => {
             const elapsed = Math.floor((Date.now() - timer.startTime) / 1000);
             timer.remaining = Math.max(timer.duration - elapsed, 0);
             
@@ -490,7 +532,10 @@ io.on('connection', (socket) => {
               enabled: timer.enabled
             });
 
-            // Check for variable triggers at specific time intervals
+            // Update timer variables and check triggers
+            await updateTimerVariables(roomId, 'secondary', timer.remaining, timer.duration, io);
+
+            // Check for variable triggers at specific time intervals (legacy)
             checkSecondaryTimerTriggers(roomId, timer.remaining);
 
             if (timer.remaining <= 0) {

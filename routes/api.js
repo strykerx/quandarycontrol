@@ -6,6 +6,215 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 
+// Trigger processing system
+function checkAndExecuteTriggers(roomId, variableName, newValue, io) {
+  try {
+    console.log('Checking triggers for:', { roomId, variableName, newValue });
+    const db = getDatabase();
+    const room = db.prepare('SELECT config FROM rooms WHERE id = ?').get(roomId);
+    
+    if (!room || !room.config) {
+      console.log('No room or config found');
+      return;
+    }
+    
+    let config = {};
+    try {
+      config = JSON.parse(room.config);
+    } catch (e) {
+      console.log('Invalid config JSON');
+      return; // Invalid config JSON
+    }
+    
+    const triggers = config.triggers || [];
+    console.log('Found triggers:', triggers.length);
+    
+    triggers.forEach((trigger, index) => {
+      console.log(`Checking trigger ${index}:`, trigger);
+      if (trigger.variable === variableName) {
+        const conditionResult = evaluateCondition(trigger, newValue);
+        console.log(`Condition result:`, conditionResult);
+        if (conditionResult) {
+          console.log('Executing trigger actions:', trigger.actions);
+          executeTriggerActions(roomId, trigger.actions, io);
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error processing triggers:', error);
+  }
+}
+
+function evaluateCondition(trigger, value) {
+  const { condition, value: triggerValue } = trigger;
+  console.log('Evaluating condition:', { 
+    condition, 
+    triggerValue, 
+    actualValue: value, 
+    triggerValueType: typeof triggerValue,
+    actualValueType: typeof value 
+  });
+  
+  let result = false;
+  switch (condition) {
+    case 'equals':
+      result = String(value) === String(triggerValue);
+      break;
+    case 'not_equals':
+      result = String(value) !== String(triggerValue);
+      break;
+    case 'greater_than':
+      result = Number(value) > Number(triggerValue);
+      break;
+    case 'less_than':
+      result = Number(value) < Number(triggerValue);
+      break;
+    case 'contains':
+      result = String(value).includes(String(triggerValue));
+      break;
+    case 'changes_to':
+      result = String(value) === String(triggerValue);
+      break;
+    case 'changes_from':
+      // This would require storing previous values, implement if needed
+      result = false;
+      break;
+    default:
+      result = false;
+  }
+  
+  console.log('Condition evaluation result:', result);
+  return result;
+}
+
+function executeTriggerActions(roomId, actions, io) {
+  actions.forEach(action => {
+    try {
+      switch (action.type) {
+        case 'play_sound':
+          io.to(roomId).emit('play_sound', {
+            file: action.file,
+            volume: action.volume || 50
+          });
+          break;
+        
+        case 'show_media':
+          io.to(roomId).emit('show_media', {
+            file: action.file,
+            duration: action.duration || 5
+          });
+          break;
+        
+        case 'show_message':
+          io.to(roomId).emit('show_message', {
+            text: action.text,
+            duration: action.duration || 3
+          });
+          break;
+        
+        case 'set_variable':
+          // Recursively set another variable (be careful of loops!)
+          updateVariable(roomId, action.variable, action.value);
+          break;
+        
+        case 'timer_control':
+          io.to(roomId).emit('timer_control', {
+            action: action.action,
+            amount: action.amount || 0
+          });
+          break;
+        
+        case 'send_webhook':
+          executeWebhook(action);
+          break;
+        
+        case 'change_theme':
+          io.to(roomId).emit('change_theme', {
+            theme: action.theme
+          });
+          break;
+        
+        case 'trigger_layout':
+          io.to(roomId).emit('change_layout', {
+            layout: action.layout
+          });
+          break;
+      }
+    } catch (error) {
+      console.error('Error executing trigger action:', error);
+    }
+  });
+}
+
+function updateVariable(roomId, varName, value) {
+  try {
+    const db = getDatabase();
+    const room = db.prepare('SELECT api_variables FROM rooms WHERE id = ?').get(roomId);
+    
+    if (!room) return;
+    
+    let variables = {};
+    try {
+      variables = JSON.parse(room.api_variables || '{}');
+    } catch (e) {
+      variables = {};
+    }
+    
+    variables[varName] = value;
+    
+    const updateStmt = db.prepare('UPDATE rooms SET api_variables = ? WHERE id = ?');
+    updateStmt.run(JSON.stringify(variables), roomId);
+    
+    // Broadcast the update
+    const { io } = require('../server');
+    io.to(roomId).emit('variable_updated', {
+      var: varName,
+      value: value,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error updating variable:', error);
+  }
+}
+
+function executeWebhook(action) {
+  // Simple webhook implementation using fetch
+  const https = require('https');
+  const http = require('http');
+  const url = require('url');
+  
+  try {
+    const parsedUrl = url.parse(action.url);
+    const protocol = parsedUrl.protocol === 'https:' ? https : http;
+    
+    const options = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+      path: parsedUrl.path,
+      method: action.method || 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+    
+    const req = protocol.request(options, (res) => {
+      console.log(`Webhook ${action.url} responded with status: ${res.statusCode}`);
+    });
+    
+    req.on('error', (error) => {
+      console.error('Webhook error:', error);
+    });
+    
+    if (action.method !== 'GET') {
+      req.write(JSON.stringify(action.payload || {}));
+    }
+    
+    req.end();
+  } catch (error) {
+    console.error('Webhook execution error:', error);
+  }
+}
+
 const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
 try { fs.mkdirSync(uploadDir, { recursive: true }); } catch (_) {}
 
@@ -391,6 +600,7 @@ router.post('/rooms/:roomId/variables/:varName', (req, res) => {
   try {
     const { roomId, varName } = req.params;
     const { value, type = 'string' } = req.body;
+    console.log('Variable update API called:', { roomId, varName, body: req.body });
 
     if (value === undefined) {
       return res.status(400).json({
@@ -449,13 +659,20 @@ router.post('/rooms/:roomId/variables/:varName', (req, res) => {
     const updateStmt = db.prepare('UPDATE rooms SET api_variables = ? WHERE id = ?');
     updateStmt.run(JSON.stringify(variables), roomId);
 
-    // Broadcast update via Socket.IO
-    const { io } = require('../server');
-    io.to(roomId).emit('variable_updated', {
-      var: varName,
-      value: processedValue,
-      timestamp: new Date().toISOString()
-    });
+    // Broadcast update via Socket.IO  
+    // Note: io instance should be passed from server to avoid circular dependency
+    const server = require('../server');
+    const io = server.io;
+    if (io) {
+      io.to(roomId).emit('variable_updated', {
+        var: varName,
+        value: processedValue,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Check and execute triggers
+    checkAndExecuteTriggers(roomId, varName, processedValue, io);
 
     res.status(201).json({
       success: true,
@@ -2579,4 +2796,4 @@ router.put('/rooms/:id/notifications/settings', (req, res) => {
   }
 });
 
-module.exports = { router, getRoomByShortcode };
+module.exports = { router, getRoomByShortcode, checkAndExecuteTriggers };

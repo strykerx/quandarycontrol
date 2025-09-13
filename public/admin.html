@@ -106,28 +106,64 @@
         </div>
     </div>
 
-    <!-- Variable Creation Modal -->
+    <!-- Variable Management Modal -->
     <div id="variable-modal" class="modal">
         <div class="modal-content variable-modal-content">
             <div class="modal-header">
-                <h2>⚡ Manage API Variables</h2>
+                <h2>⚡ Manage Room Variables & Automation</h2>
                 <button class="close-btn" id="close-variable-modal">×</button>
             </div>
 
             <div class="variable-modal-body">
-                <div class="variable-list-header">
-                    <button class="btn-add-variable btn-primary" id="add-variable-btn">
-                        ➕ Add Variable
-                    </button>
+                <!-- Variable Management Tabs -->
+                <div class="variable-tabs">
+                    <button class="variable-tab active" data-tab="variables">Variables</button>
+                    <button class="variable-tab" data-tab="triggers">Triggers & Actions</button>
+                    <button class="variable-tab" data-tab="api-docs">API Documentation</button>
                 </div>
 
-                <div class="variables-list" id="variables-list">
-                    <!-- Variables will be rendered here -->
+                <!-- Variables Tab -->
+                <div id="variables-tab" class="variable-tab-content active">
+                    <div class="variable-list-header">
+                        <button class="btn-add-variable btn-primary" id="add-variable-btn">
+                            ➕ Add Variable
+                        </button>
+                        <div class="variable-info">
+                            <p><strong>Timer variables are created automatically:</strong> <code>timer_main</code>, <code>timer_secondary</code>, <code>timer_main_remaining</code>, <code>timer_secondary_remaining</code></p>
+                        </div>
+                    </div>
+
+                    <div class="variables-list" id="variables-list">
+                        <!-- Variables will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Triggers & Actions Tab -->
+                <div id="triggers-tab" class="variable-tab-content">
+                    <div class="triggers-header">
+                        <button class="btn-add-trigger btn-primary" id="add-trigger-btn">
+                            ➕ Add Trigger
+                        </button>
+                    </div>
+
+                    <div class="triggers-list" id="triggers-list">
+                        <!-- Triggers will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- API Documentation Tab -->
+                <div id="api-docs-tab" class="variable-tab-content">
+                    <div class="api-docs-section">
+                        <h3>API Endpoints</h3>
+                        <div class="api-endpoints" id="api-endpoints">
+                            <!-- API documentation will be rendered here -->
+                        </div>
+                    </div>
                 </div>
 
                 <div class="variable-actions">
                     <button type="button" class="btn-secondary" id="cancel-variable-btn">Cancel</button>
-                    <button type="button" class="btn-primary" id="save-variables-btn">Save Variables</button>
+                    <button type="button" class="btn-primary" id="save-variables-btn">Save All Changes</button>
                 </div>
             </div>
         </div>
@@ -144,12 +180,12 @@
             <form id="variable-form">
                 <div class="form-group">
                     <label for="variable-name">Variable Name</label>
-                    <input type="text" id="variable-name" class="form-input" placeholder="e.g., player_count" required>
+                    <input type="text" id="variable-name" name="variableName" class="form-input" placeholder="e.g., player_count" required>
                 </div>
 
                 <div class="form-group">
                     <label for="variable-type">Type</label>
-                    <select id="variable-type" class="form-input">
+                    <select id="variable-type" name="variableType" class="form-input">
                         <option value="string">String</option>
                         <option value="number">Number</option>
                         <option value="boolean">Boolean</option>
@@ -160,12 +196,151 @@
 
                 <div class="form-group">
                     <label for="variable-value">Value</label>
-                    <textarea id="variable-value" class="form-input" rows="3" placeholder="Enter value"></textarea>
+                    <textarea id="variable-value" name="variableValue" class="form-input" rows="3" placeholder="For boolean: true or false; for string: any text; for number: 123; for array: [1,2,3]; for object: {&quot;key&quot;:&quot;value&quot;}"></textarea>
                 </div>
 
                 <div class="variable-form-actions">
                     <button type="button" class="btn-secondary" id="cancel-variable-form-btn">Cancel</button>
                     <button type="submit" class="btn-primary" id="save-variable-form-btn">Add Variable</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Trigger Creation Modal -->
+    <div id="trigger-form-modal" class="modal">
+        <div class="modal-content trigger-form-content">
+            <div class="modal-header">
+                <h2 id="trigger-form-title">Create Trigger</h2>
+                <button class="close-btn" id="close-trigger-form-modal">×</button>
+            </div>
+
+            <form id="trigger-form">
+                <div class="form-group">
+                    <label for="trigger-name">Trigger Name</label>
+                    <input type="text" id="trigger-name" class="form-input" placeholder="e.g., Door Opens" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="trigger-variable">Variable to Watch</label>
+                    <select id="trigger-variable" class="form-input" required>
+                        <option value="">Select a variable...</option>
+                        <!-- Variables will be populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="trigger-condition">Condition</label>
+                    <select id="trigger-condition" class="form-input" required>
+                        <option value="equals">Equals</option>
+                        <option value="not_equals">Not Equals</option>
+                        <option value="greater_than">Greater Than</option>
+                        <option value="less_than">Less Than</option>
+                        <option value="contains">Contains</option>
+                        <option value="changes_to">Changes To</option>
+                        <option value="changes_from">Changes From</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="trigger-value">Value</label>
+                    <input type="text" id="trigger-value" class="form-input" placeholder="e.g., true, 5, unlocked" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Actions to Execute:</label>
+                    <div class="trigger-actions-container" id="trigger-actions-container">
+                        <!-- Action items will be added here -->
+                    </div>
+                    <button type="button" class="btn-secondary btn-add-action-to-trigger" id="add-action-to-trigger">
+                        ➕ Add Action
+                    </button>
+                </div>
+
+                <div class="trigger-form-actions">
+                    <button type="button" class="btn-secondary" id="cancel-trigger-form-btn">Cancel</button>
+                    <button type="submit" class="btn-primary" id="save-trigger-form-btn">Create Trigger</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Action Selection Modal -->
+    <div id="action-selection-modal" class="modal">
+        <div class="modal-content action-selection-content">
+            <div class="modal-header">
+                <h2>Select Action Type</h2>
+                <button class="close-btn" id="close-action-selection-modal">×</button>
+            </div>
+
+            <div class="action-types-grid">
+                <div class="action-type-card" data-action="play_sound">
+                    <div class="action-icon">🔊</div>
+                    <h3>Play Sound</h3>
+                    <p>Play a notification sound through the audio system</p>
+                </div>
+                
+                <div class="action-type-card" data-action="show_media">
+                    <div class="action-icon">🖼️</div>
+                    <h3>Show Media</h3>
+                    <p>Display image/video on player screen</p>
+                </div>
+                
+                <div class="action-type-card" data-action="set_variable">
+                    <div class="action-icon">📊</div>
+                    <h3>Set Variable</h3>
+                    <p>Change the value of another variable</p>
+                </div>
+                
+                <div class="action-type-card" data-action="timer_control">
+                    <div class="action-icon">⏱️</div>
+                    <h3>Timer Control</h3>
+                    <p>Start, stop, or adjust the room timer</p>
+                </div>
+                
+                <div class="action-type-card" data-action="send_webhook">
+                    <div class="action-icon">🔗</div>
+                    <h3>Send Webhook</h3>
+                    <p>Send HTTP request to external endpoint</p>
+                </div>
+                
+                <div class="action-type-card" data-action="show_message">
+                    <div class="action-icon">💬</div>
+                    <h3>Show Message</h3>
+                    <p>Display message on player interface</p>
+                </div>
+                
+                <div class="action-type-card" data-action="change_theme">
+                    <div class="action-icon">🎨</div>
+                    <h3>Change Theme</h3>
+                    <p>Switch the room theme</p>
+                </div>
+                
+                <div class="action-type-card" data-action="trigger_layout">
+                    <div class="action-icon">📐</div>
+                    <h3>Change Layout</h3>
+                    <p>Switch to different layout configuration</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Configuration Modal -->
+    <div id="action-config-modal" class="modal">
+        <div class="modal-content action-config-content">
+            <div class="modal-header">
+                <h2 id="action-config-title">Configure Action</h2>
+                <button class="close-btn" id="close-action-config-modal">×</button>
+            </div>
+
+            <form id="action-config-form">
+                <div id="action-config-fields">
+                    <!-- Action-specific fields will be rendered here -->
+                </div>
+
+                <div class="action-config-actions">
+                    <button type="button" class="btn-secondary" id="cancel-action-config-btn">Cancel</button>
+                    <button type="submit" class="btn-primary" id="save-action-config-btn">Add Action</button>
                 </div>
             </form>
         </div>
@@ -689,6 +864,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/ui-state.js"></script>
     <script src="/theme-configurator.js"></script>
+    <script src="/variable-manager.js"></script>
     <script src="/admin.js"></script>
     <script src="/admin-layout-controls.js"></script>
 </body>

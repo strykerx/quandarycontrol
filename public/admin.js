@@ -928,114 +928,84 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Enhanced Variable Management System
-    let currentVariables = {};
-    let editingVariableIndex = -1;
-
-    // Initialize variable management on DOM load
-    document.addEventListener('DOMContentLoaded', () => {
-        // Get DOM references
-        const variableModal = document.getElementById('variable-modal');
-        const variablesListEl = document.getElementById('variables-list');
-        
-        // Check if required elements exist
-        if (!variableModal) {
-            console.warn('Variable modal not found in DOM');
-            return;
-        }
-        
-        // Initialize systems
-        initializeVariableManagement();
-        renderVariablesList();
-        
-        // Event listeners
-        manageVariablesBtn?.addEventListener('click', openVariableModal);
-        addVariableBtn?.addEventListener('click', openVariableFormModal);
-    });
-    const variableFormModal = document.getElementById('variable-form-modal');
-    const manageVariablesBtn = document.getElementById('manage-variables-btn');
-    const addVariableBtn = document.getElementById('add-variable-btn');
-    const saveVariablesBtn = document.getElementById('save-variables-btn');
-    const cancelVariableBtn = document.getElementById('cancel-variable-btn');
-    const closeVariableModalBtn = document.getElementById('close-variable-modal');
-    const closeVariableFormModalBtn = document.getElementById('close-variable-form-modal');
-    const cancelVariableFormBtn = document.getElementById('cancel-variable-form-btn');
-    const saveVariableFormBtn = document.getElementById('save-variable-form-btn');
-    const variableForm = document.getElementById('variable-form');
-    const variablesListEl = document.getElementById('variables-list');
-
+    // Variable Management System (uses new variable-manager.js)
     function initializeVariableManagement() {
-        // Load variables from the textarea on modal open
-        manageVariablesBtn.addEventListener('click', openVariableModal);
-        addVariableBtn.addEventListener('click', openVariableFormModal);
-        saveVariablesBtn.addEventListener('click', saveVariableChanges);
-        cancelVariableBtn.addEventListener('click', closeVariableModal);
-        closeVariableModalBtn.addEventListener('click', closeVariableModal);
-        closeVariableFormModalBtn.addEventListener('click', closeVariableFormModal);
-        cancelVariableFormBtn.addEventListener('click', closeVariableFormModal);
-        saveVariableFormBtn.addEventListener('click', saveVariable);
-
-        // Variable form event listeners
-        variableForm.addEventListener('submit', handleVariableFormSubmit);
-
-        // Close modals when clicking outside
-        if (variableModal) {
-            variableModal.addEventListener('click', (e) => {
-                if (e.target === variableModal) closeVariableModal();
-            });
-        }
-        if (variableFormModal) {
-            variableFormModal.addEventListener('click', (e) => {
-                if (e.target === variableFormModal) closeVariableFormModal();
-            });
-        }
+        // Use event delegation since the button is created dynamically
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'manage-variables-btn') {
+                e.preventDefault();
+                console.log('Manage Variables button clicked via delegation'); // Debug log
+                openVariableModal();
+            }
+        });
     }
 
     function openVariableModal() {
         try {
-            // Parse current JSON from textarea
-            const apiVariablesTextarea = document.getElementById('api-variables');
-            const jsonContent = apiVariablesTextarea.value.trim() || '{}';
-            currentVariables = JSON.parse(jsonContent);
-
-            renderVariablesList();
+            console.log('openVariableModal called'); // Debug log
+            
+            // Use the new variable manager
+            const currentState = store.getState();
+            const roomId = currentState.currentEditingId;
+            
+            console.log('Room ID:', roomId); // Debug log
+            console.log('variableManager available:', !!window.variableManager); // Debug log
+            
+            if (roomId && window.variableManager) {
+                window.variableManager.setCurrentRoom(roomId);
+            } else if (!window.variableManager) {
+                console.error('Variable manager not loaded');
+                alert('Variable manager not loaded. Please refresh the page.');
+                return;
+            } else if (!roomId) {
+                console.error('No room selected for editing');
+                alert('Please select a room to edit first.');
+                return;
+            }
+            
+            console.log('Attempting to show variable modal...'); // Debug log
+            const modalElement = document.getElementById('variable-modal');
+            console.log('Modal element found:', !!modalElement); // Debug log
+            
             ui.showModal('variable-modal');
+            console.log('ui.showModal called');
+            
+            // Check modal visibility after ui.showModal
+            setTimeout(() => {
+                const computedStyle = window.getComputedStyle(modalElement);
+                console.log('Modal display:', computedStyle.display);
+                console.log('Modal visibility:', computedStyle.visibility);
+                console.log('Modal opacity:', computedStyle.opacity);
+                console.log('Modal classes:', modalElement.classList.toString());
+            }, 100);
+            
+            // Fallback: try to show modal directly if ui.showModal doesn't work
+            if (modalElement && modalElement.style.display !== 'block') {
+                console.log('Fallback: showing modal directly');
+                modalElement.style.display = 'block';
+                modalElement.classList.add('show');
+                modalElement.style.opacity = '1';
+                modalElement.style.visibility = 'visible';
+            }
         } catch (error) {
-            ui.handleUserError('json-parse', 'Invalid JSON in API Variables field. Please correct it first.');
-            console.error('Error parsing JSON:', error);
+            ui.handleUserError('variable-modal-error', 'Error opening variable management interface.');
+            console.error('Error opening variable modal:', error);
         }
     }
 
     function closeVariableModal() {
         ui.hideModal('variable-modal');
-        currentVariables = {};
-        editingVariableIndex = -1;
     }
 
-    function openVariableFormModal(index = -1) {
-        const title = document.getElementById('variable-form-title');
-        editingVariableIndex = index;
+    // Legacy variable references (for compatibility with old code)
+    let currentVariables = {};
+    let editingVariableIndex = -1;
+    
+    // Action Management System
+    let currentActions = [];
+    let editingActionIndex = -1;
 
-        if (index >= 0) {
-            // Editing existing variable
-            const varNames = Object.keys(currentVariables);
-            const varName = varNames[index];
-            const varData = currentVariables[varName];
-
-            document.getElementById('variable-name').value = varName;
-            document.getElementById('variable-type').value = inferVariableType(varData);
-            document.getElementById('variable-value').value = typeof varData === 'string' ? varData : JSON.stringify(varData, null, 2);
-            title.textContent = 'Edit Variable';
-        } else {
-            // Adding new variable
-            variableForm.reset();
-            title.textContent = 'Add Variable';
-            document.getElementById('variable-type').value = 'string';
-            document.getElementById('variable-value').value = '';
-        }
-
-        ui.showModal('variable-form-modal');
-    }
+    // Action modal DOM elements
 
     function closeVariableFormModal() {
         ui.hideModal('variable-form-modal');
@@ -1206,10 +1176,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.handleApiSuccess(`Variable "${name}" deleted successfully`);
         }
     };
-
-    // Action Management System
-    let currentActions = [];
-    let editingActionIndex = -1;
 
     // Action modal DOM elements
     const actionModal = document.getElementById('action-modal');
@@ -1465,6 +1431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Initialize systems 
     initializeVariableManagement();
     initializeActionManagement();
 

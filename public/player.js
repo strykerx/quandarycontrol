@@ -97,6 +97,11 @@ function setupSocketListeners() {
     socket.on('clear_chat', handleClearChat);
     socket.on('clear_hints', handleClearHints);
     socket.on('show_lightbox', handleShowLightbox);
+    
+    // Trigger event handlers
+    socket.on('show_message', handleShowMessage);
+    socket.on('show_media', handleShowMedia);
+    socket.on('play_sound', handlePlaySound);
     socket.on('layout_updated', handleLayoutUpdated);
     
     console.log('Socket event listeners registered, including show_lightbox');
@@ -346,6 +351,116 @@ function handleShowLightbox(data) {
     if (window.notificationManager) {
         window.notificationManager.onMediaReceived();
     }
+}
+
+// Trigger action handlers
+function handleShowMessage(data) {
+    console.log('handleShowMessage called with:', data);
+    
+    // Create and show a message overlay
+    const messageOverlay = document.createElement('div');
+    messageOverlay.id = 'trigger-message-overlay';
+    messageOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        font-size: 2rem;
+        color: white;
+        text-align: center;
+        padding: 20px;
+    `;
+    
+    const messageText = document.createElement('div');
+    messageText.textContent = data.text || 'Message from trigger';
+    messageText.style.cssText = `
+        background: rgba(255, 255, 255, 0.1);
+        padding: 30px;
+        border-radius: 10px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        max-width: 80%;
+        word-wrap: break-word;
+    `;
+    
+    messageOverlay.appendChild(messageText);
+    document.body.appendChild(messageOverlay);
+    
+    // Auto-remove after specified duration
+    const duration = (data.duration || 3) * 1000;
+    setTimeout(() => {
+        if (messageOverlay.parentNode) {
+            messageOverlay.parentNode.removeChild(messageOverlay);
+        }
+    }, duration);
+}
+
+function handleShowMedia(data) {
+    console.log('handleShowMedia called with:', data);
+    
+    // Use existing lightbox system for media display
+    const lightboxData = {
+        type: data.file.includes('.mp4') || data.file.includes('.webm') ? 'video' : 'image',
+        url: data.file,
+        autoClose: (data.duration || 5) * 1000,
+        title: 'Triggered Media'
+    };
+    
+    showLightbox(lightboxData);
+    
+    // Play media received notification
+    if (window.notificationManager) {
+        window.notificationManager.onMediaReceived();
+    }
+}
+
+function handlePlaySound(data) {
+    console.log('handlePlaySound called with:', data);
+    
+    // Create and play audio element
+    const audio = document.createElement('audio');
+    
+    // Handle different sound file formats
+    if (data.file && data.file.length > 10) {
+        // Assume it's an audio file ID, construct the path
+        audio.src = `/uploads/${data.file}`;
+    } else {
+        // Handle predefined sounds (notification, success, error)
+        const soundMap = {
+            'notification': '/sounds/notification.mp3',
+            'success': '/sounds/success.mp3', 
+            'error': '/sounds/error.mp3'
+        };
+        audio.src = soundMap[data.file] || '/sounds/notification.mp3';
+    }
+    
+    audio.volume = (data.volume || 50) / 100;
+    
+    audio.play().catch(error => {
+        console.log('Audio play failed:', error);
+        // Fallback: try to play a simple beep
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.2);
+        } catch (fallbackError) {
+            console.log('Audio fallback also failed:', fallbackError);
+        }
+    });
 }
 
 // Layout update handler for real-time layout changes
