@@ -1,3 +1,21 @@
+// Global function to open layout builder for specific room
+window.openLayoutBuilder = function(roomId, roomName) {
+    console.log('Opening layout builder for room:', roomId, roomName);
+    
+    if (!roomId) {
+        alert('No room ID provided');
+        return;
+    }
+    
+    // Store room info for potential use
+    sessionStorage.setItem('layoutBuilder.roomId', roomId);
+    sessionStorage.setItem('layoutBuilder.roomName', roomName);
+    
+    // Open layout builder with room ID parameter in new tab
+    const url = `/layout-builder.html?roomId=${encodeURIComponent(roomId)}`;
+    window.open(url, '_blank');
+};
+
 // Admin room management logic with UI State Foundation
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize state management foundation
@@ -12,6 +30,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     forms.registerField('timer-duration', '00:00', [
         { validator: (value) => /^([0-9]{1,2}):([0-5][0-9])$/.test(value) || value === '00:00', message: 'Timer duration must be in MM:SS format (e.g., 05:30)' }
+    ]);
+
+    forms.registerField('secondary-timer-enabled', false, []);
+    
+    forms.registerField('secondary-timer-duration', '00:00', [
+        { validator: (value) => /^([0-9]{1,2}):([0-5][0-9])$/.test(value) || value === '00:00', message: 'Secondary timer duration must be in MM:SS format (e.g., 05:30)' }
     ]);
 
     forms.registerField('api-variables', '{}', [
@@ -59,10 +83,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeAdminApp();
     setupEventListeners();
     setupStateSubscriptions();
+    
+    // Setup event delegation for dynamically created room cards
+    setupRoomCardEventDelegation();
 
     function initializeAdminApp() {
         // Set up form field bindings
-        ['room-name', 'timer-duration', 'api-variables', 'config', 'hint-type'].forEach(fieldName => {
+        ['room-name', 'timer-duration', 'secondary-timer-enabled', 'secondary-timer-duration', 'api-variables', 'config', 'hint-type'].forEach(fieldName => {
             const element = document.getElementById(fieldName);
             if (element) {
                 element.addEventListener('input', () => {
@@ -81,11 +108,69 @@ document.addEventListener('DOMContentLoaded', () => {
         loadRooms();
     }
 
+    function setupRoomCardEventDelegation() {
+        // Handle layout builder button clicks with event delegation
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('btn-layout-builder')) {
+                e.preventDefault();
+                
+                const roomId = e.target.dataset.roomId;
+                const roomName = e.target.dataset.roomName || 'Unknown Room';
+                
+                console.log('Layout builder button clicked for room:', roomId, roomName);
+                
+                if (roomId) {
+                    openLayoutBuilder(roomId, roomName);
+                } else {
+                    alert('Room ID not found');
+                }
+            }
+        });
+    }
+
     function setupEventListeners() {
         createBtn.addEventListener('click', () => openModal());
         closeBtn.addEventListener('click', () => closeModal());
         cancelBtn.addEventListener('click', () => closeModal());
         roomForm.addEventListener('submit', handleFormSubmit);
+        
+        // Secondary timer checkbox handling
+        const secondaryTimerEnabled = document.getElementById('secondary-timer-enabled');
+        const secondaryTimerDurationGroup = document.getElementById('secondary-timer-duration-group');
+        
+        if (secondaryTimerEnabled && secondaryTimerDurationGroup) {
+            function toggleSecondaryTimerDuration() {
+                if (secondaryTimerEnabled.checked) {
+                    secondaryTimerDurationGroup.style.display = 'block';
+                } else {
+                    secondaryTimerDurationGroup.style.display = 'none';
+                }
+            }
+            
+            secondaryTimerEnabled.addEventListener('change', () => {
+                forms.updateField('secondary-timer-enabled', secondaryTimerEnabled.checked);
+                toggleSecondaryTimerDuration();
+            });
+            
+            // Initialize state
+            toggleSecondaryTimerDuration();
+        }
+
+        // Layout builder button
+        const layoutBuilderBtn = document.getElementById('layout-builder-btn');
+        if (layoutBuilderBtn) {
+            layoutBuilderBtn.addEventListener('click', () => {
+                window.location.href = '/layout-builder.html';
+            });
+        }
+
+        // Theme gallery button
+        const themeGalleryBtn = document.getElementById('theme-gallery-btn');
+        if (themeGalleryBtn) {
+            themeGalleryBtn.addEventListener('click', () => {
+                openThemeGallery();
+            });
+        }
 
         // Close modal when clicking outside
         roomModal.addEventListener('click', (e) => {
@@ -159,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resetFormUI() {
         // Clear all field validation UI
-        ['room-name', 'timer-duration', 'api-variables', 'config', 'hint-type'].forEach(fieldName => {
+        ['room-name', 'timer-duration', 'secondary-timer-enabled', 'secondary-timer-duration', 'api-variables', 'config', 'hint-type'].forEach(fieldName => {
             const element = document.getElementById(fieldName);
             if (element) {
                 element.classList.remove('valid', 'invalid');
@@ -256,8 +341,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div class="room-config-actions">
-                <button class="btn-config-layout" onclick="configureRoomLayout('${room.id}', '${room.name}')">
-                    🎨 Configure Layout
+                <button class="btn-config-theme" onclick="configureRoomTheme('${room.id}', '${room.name}')">
+                    🎭 Configure Theme
                 </button>
             </div>
         `;
@@ -302,12 +387,35 @@ document.addEventListener('DOMContentLoaded', () => {
         forms.updateField('room-name', room.name);
         const timerDurationMMSS = convertSecondsToMMSS(room.timer_duration);
         forms.updateField('timer-duration', timerDurationMMSS);
+        
+        // Secondary timer fields
+        const secondaryTimerEnabled = Boolean(room.secondary_timer_enabled);
+        const secondaryTimerDurationMMSS = convertSecondsToMMSS(room.secondary_timer_duration || 0);
+        forms.updateField('secondary-timer-enabled', secondaryTimerEnabled);
+        forms.updateField('secondary-timer-duration', secondaryTimerDurationMMSS);
+        
         forms.updateField('api-variables', room.api_variables || '{}');
         forms.updateField('config', room.config || '{}');
 
         // Update form elements
         document.getElementById('room-name').value = room.name;
         document.getElementById('timer-duration').value = timerDurationMMSS;
+        
+        // Update secondary timer elements
+        const secondaryTimerEnabledEl = document.getElementById('secondary-timer-enabled');
+        const secondaryTimerDurationEl = document.getElementById('secondary-timer-duration');
+        const secondaryTimerDurationGroup = document.getElementById('secondary-timer-duration-group');
+        
+        if (secondaryTimerEnabledEl) {
+            secondaryTimerEnabledEl.checked = secondaryTimerEnabled;
+        }
+        if (secondaryTimerDurationEl) {
+            secondaryTimerDurationEl.value = secondaryTimerDurationMMSS;
+        }
+        if (secondaryTimerDurationGroup) {
+            secondaryTimerDurationGroup.style.display = secondaryTimerEnabled ? 'block' : 'none';
+        }
+        
         document.getElementById('api-variables').value = room.api_variables || '{}';
         document.getElementById('config').value = room.config || '{}';
 
@@ -343,8 +451,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Build API payload with correct keys expected by backend
         const name = (forms.getFieldValue('room-name') || '').trim();
         const timerMMSS = forms.getFieldValue('timer-duration');
+        const secondaryTimerEnabled = forms.getFieldValue('secondary-timer-enabled') || false;
+        const secondaryTimerMMSS = forms.getFieldValue('secondary-timer-duration');
         const apiVarsStr = forms.getFieldValue('api-variables') || '{}';
         const configStr = forms.getFieldValue('config') || '{}';
+        const selectedTheme = document.getElementById('room-theme')?.value || 'example-theme';
 
         let api_variables, config;
         try {
@@ -355,12 +466,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Include theme in config
+        config.theme = selectedTheme;
+
         const payload = {
             name,
             timer_duration: convertMMSSToSeconds(timerMMSS),
+            secondary_timer_enabled: secondaryTimerEnabled ? 1 : 0,
+            secondary_timer_duration: convertMMSSToSeconds(secondaryTimerMMSS),
             api_variables,
             config,
-            hint_config: { type: forms.getFieldValue('hint-type') || 'broadcast' }
+            hint_config: { type: forms.getFieldValue('hint-type') || 'broadcast' },
+            theme: selectedTheme
         };
 
         ui.showLoader('form-submit');
@@ -422,6 +539,16 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.hideLoader('form-submit');
         }
     }
+
+    // Configure room theme function
+    window.configureRoomTheme = (roomId, roomName) => {
+        console.log('Opening theme configurator for room:', roomId, roomName);
+        if (window.themeConfigurator) {
+            window.themeConfigurator.openForRoom(roomId, roomName);
+        } else {
+            console.error('Theme configurator not loaded');
+        }
+    };
 
     // Expose functions globally for HTML onclick handlers with state management
     window.editRoom = (id) => {
@@ -810,6 +937,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Get DOM references
         const variableModal = document.getElementById('variable-modal');
         const variablesListEl = document.getElementById('variables-list');
+        
+        // Check if required elements exist
+        if (!variableModal) {
+            console.warn('Variable modal not found in DOM');
+            return;
+        }
         
         // Initialize systems
         initializeVariableManagement();
@@ -2595,6 +2728,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return null;
     }
+
     
     // Enhanced preset management
     function loadLayoutPresetFromServer(presetName) {

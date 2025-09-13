@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[room-info field="name"]</title>
+    
+    <!-- Base Styles -->
+    <link rel="stylesheet" href="/styles.css">
+    
+    <!-- Theme Styles -->
+    <link rel="stylesheet" href="/themes/modern-theme/style.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="theme-modern">
+    <!-- Modern Theme Container -->
+    <div class="theme-container">
+        <!-- Header Section -->
+        <header class="theme-header">
+            <div class="theme-header-content">
+                <div class="header-left">
+                    <!-- Room Info Component -->
+                    <div id="room-info-component">
+                        [room-info showProgress="true"]
+                    </div>
+                </div>
+                
+                <div class="header-right">
+                    <!-- Timer Component -->
+                    <div id="timer-component">
+                        [timer format="mm:ss" showControls="true"]
+                    </div>
+                    
+                    <!-- Secondary Timer Component (will be shown/hidden based on room config) -->
+                    <div id="secondary-timer-component" style="display: none;">
+                        [secondary-timer format="mm:ss" showControls="false"]
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content Area -->
+        <main class="theme-main">
+            <!-- Left Panel -->
+            <div class="left-panel">
+                <!-- Hints Component -->
+                <div id="hints-component">
+                    [hints maxHints="10" showNavigation="true" autoCycle="false"]
+                </div>
+                
+                <!-- Variables Component -->
+                <div id="variables-component">
+                    [variables updateInterval="1000"]
+                </div>
+            </div>
+            
+            <!-- Right Panel -->
+            <div class="right-panel">
+                <!-- Chat Component -->
+                <div id="chat-component">
+                    [chat maxMessages="50" showTimestamps="true" allowUserInput="true"]
+                </div>
+                
+                <!-- Game State Component -->
+                <div id="game-state-component">
+                    [game-state showScore="true" updateInterval="1000"]
+                </div>
+            </div>
+        </main>
+        
+        <!-- Hidden Components (will be shown in overlays/modals) -->
+            <!-- Media Component -->
+            <div id="media-component">
+                [media supportedFormats="jpg,png,gif,mp4,mp3,wav"]
+            </div>
+        
+        <!-- Theme Controls (for development) -->
+        <div class="theme-controls" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+            <button onclick="toggleThemeControls()" class="theme-toggle-btn">
+                <i class="fas fa-palette"></i>
+            </button>
+            
+            <div id="theme-controls-panel" style="display: none; position: absolute; bottom: 50px; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius-lg); padding: var(--spacing-md); min-width: 200px; box-shadow: var(--shadow-lg);">
+                <h4 style="margin: 0 0 var(--spacing-md) 0; color: var(--text-light);">Theme Controls</h4>
+                
+                <div class="control-group" style="margin-bottom: var(--spacing-md);">
+                    <label style="display: block; margin-bottom: var(--spacing-xs); color: var(--text-muted); font-size: var(--font-size-sm);">Animations</label>
+                    <button onclick="toggleAnimations()" class="control-btn">
+                        <i class="fas fa-play"></i> Toggle
+                    </button>
+                </div>
+                
+                <div class="control-group" style="margin-bottom: var(--spacing-md);">
+                    <label style="display: block; margin-bottom: var(--spacing-xs); color: var(--text-muted); font-size: var(--font-size-sm);">Dark Mode</label>
+                    <button onclick="toggleDarkMode()" class="control-btn">
+                        <i class="fas fa-moon"></i> Toggle
+                    </button>
+                </div>
+                
+                <div class="control-group" style="margin-bottom: var(--spacing-md);">
+                    <label style="display: block; margin-bottom: var(--spacing-xs); color: var(--text-muted); font-size: var(--font-size-sm);">High Contrast</label>
+                    <button onclick="toggleHighContrast()" class="control-btn">
+                        <i class="fas fa-adjust"></i> Toggle
+                    </button>
+                </div>
+                
+                <div class="control-group">
+                    <label style="display: block; margin-bottom: var(--spacing-xs); color: var(--text-muted); font-size: var(--font-size-sm);">Component Test</label>
+                    <button onclick="testComponents()" class="control-btn">
+                        <i class="fas fa-flask"></i> Test
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hidden elements required by player.js -->
+    <button id="start-rules-button" style="display: none;"></button>
+    
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/player.js"></script>
+    
+    <!-- Theme Registry System -->
+    <script src="/theme-registry.js"></script>
+    
+    <!-- Theme Inheritance System -->
+    <script src="/theme-inheritance.js"></script>
+    
+    <!-- Component Interface System -->
+    <script src="/theme-component-interface.js"></script>
+    
+    <!-- Theme-specific Script -->
+    <script src="/themes/modern-theme/script.js"></script>
+    
+    <!-- Theme Control Script -->
+    <script>
+        // Theme control functions
+        function toggleThemeControls() {
+            const panel = document.getElementById('theme-controls-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function toggleAnimations() {
+            document.body.classList.toggle('no-animations');
+            console.log('Animations toggled');
+        }
+        
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            console.log('Dark mode toggled');
+        }
+        
+        function toggleHighContrast() {
+            document.body.classList.toggle('high-contrast');
+            console.log('High contrast toggled');
+        }
+        
+        function testComponents() {
+            console.log('Testing components...');
+            
+            // Test timer component
+            if (window.componentFactory) {
+                const timerComponent = window.componentFactory.createComponent('timer', {
+                    format: 'mm:ss',
+                    showControls: true,
+                    debug: true
+                }, {
+                    eventBus: window.themeRegistry?.eventBus || new EventBus(),
+                    themeContext: {
+                        variables: {
+                            'primary-color': '#667eea',
+                            'bg-dark': '#0f172a',
+                            'text-light': '#f8fafc'
+                        }
+                    }
+                });
+                
+                if (timerComponent) {
+                    timerComponent.init().then(() => {
+                        console.log('Timer component test successful');
+                    }).catch(error => {
+                        console.error('Timer component test failed:', error);
+                    });
+                }
+            }
+            
+            // Test chat component
+            if (window.componentFactory) {
+                const chatComponent = window.componentFactory.createComponent('chat', {
+                    maxMessages: 10,
+                    showTimestamps: true,
+                    allowUserInput: true,
+                    debug: true
+                }, {
+                    eventBus: window.themeRegistry?.eventBus || new EventBus(),
+                    themeContext: {
+                        variables: {
+                            'primary-color': '#667eea',
+                            'bg-dark': '#0f172a',
+                            'text-light': '#f8fafc'
+                        }
+                    }
+                });
+                
+                if (chatComponent) {
+                    chatComponent.init().then(() => {
+                        console.log('Chat component test successful');
+                        // Add test message
+                        chatComponent.addMessage({
+                            text: 'Test message from component interface',
+                            sender: 'player',
+                            timestamp: new Date()
+                        });
+                    }).catch(error => {
+                        console.error('Chat component test failed:', error);
+                    });
+                }
+            }
+            
+            // Test hints component
+            if (window.componentFactory) {
+                const hintsComponent = window.componentFactory.createComponent('hints', {
+                    maxHints: 5,
+                    showNavigation: true,
+                    autoCycle: false,
+                    debug: true
+                }, {
+                    eventBus: window.themeRegistry?.eventBus || new EventBus(),
+                    themeContext: {
+                        variables: {
+                            'secondary-color': '#764ba2',
+                            'bg-dark': '#0f172a',
+                            'text-light': '#f8fafc'
+                        }
+                    }
+                });
+                
+                if (hintsComponent) {
+                    hintsComponent.init().then(() => {
+                        console.log('Hints component test successful');
+                        // Add test hint
+                        hintsComponent.addHint({
+                            text: 'This is a test hint from the component interface',
+                            priority: 1,
+                            timestamp: new Date()
+                        });
+                    }).catch(error => {
+                        console.error('Hints component test failed:', error);
+                    });
+                }
+            }
+            
+            // Test variables component
+            if (window.componentFactory) {
+                const variablesComponent = window.componentFactory.createComponent('variables', {
+                    updateInterval: 2000,
+                    debug: true
+                }, {
+                    eventBus: window.themeRegistry?.eventBus || new EventBus(),
+                    themeContext: {
+                        variables: {
+                            'accent-color': '#f59e0b',
+                            'bg-dark': '#0f172a',
+                            'text-light': '#f8fafc'
+                        }
+                    }
+                });
+                
+                if (variablesComponent) {
+                    variablesComponent.init().then(() => {
+                        console.log('Variables component test successful');
+                        // Add test variable
+                        variablesComponent.setVariable('test_var', 'Test Value');
+                        variablesComponent.setVariable('score', '100');
+                        variablesComponent.setVariable('level', '3');
+                    }).catch(error => {
+                        console.error('Variables component test failed:', error);
+                    });
+                }
+            }
+        }
+        
+        // Initialize theme when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Modern theme initialized');
+            
+            // Initialize theme registry if available
+            if (window.themeRegistry) {
+                window.themeRegistry.init().then(() => {
+                    console.log('Theme registry initialized');
+                    
+                    // Load modern theme
+                    window.themeRegistry.loadTheme('modern-theme').then(theme => {
+                        console.log('Modern theme loaded:', theme);
+                        
+                        // Activate theme
+                        window.themeRegistry.activateTheme('modern-theme').then(() => {
+                            console.log('Modern theme activated');
+                        }).catch(error => {
+                            console.error('Failed to activate modern theme:', error);
+                        });
+                    }).catch(error => {
+                        console.error('Failed to load modern theme:', error);
+                    });
+                }).catch(error => {
+                    console.error('Failed to initialize theme registry:', error);
+                });
+            }
+            
+            // Initialize theme inheritance manager if available
+            if (window.themeInheritanceManager) {
+                window.themeInheritanceManager.init().then(() => {
+                    console.log('Theme inheritance manager initialized');
+                }).catch(error => {
+                    console.error('Failed to initialize theme inheritance manager:', error);
+                });
+            }
+            
+            // Set up theme change listeners
+            if (window.themeRegistry) {
+                window.themeRegistry.eventBus.on('theme:activated', (theme) => {
+                    console.log('Theme activated:', theme);
+                    document.body.className = `theme-${theme.id}`;
+                });
+                
+                window.themeRegistry.eventBus.on('theme:changed', (data) => {
+                    console.log('Theme changed:', data);
+                });
+            }
+            
+            // Set up component event listeners
+            if (window.componentFactory) {
+                console.log('Component factory available');
+                console.log('Available components:', window.componentFactory.getComponentTypes());
+            }
+            
+            // Hide theme controls when clicking outside
+            document.addEventListener('click', function(event) {
+                const controlsPanel = document.getElementById('theme-controls-panel');
+                const toggleBtn = event.target.closest('.theme-toggle-btn');
+                
+                if (!toggleBtn && !controlsPanel.contains(event.target)) {
+                    controlsPanel.style.display = 'none';
+                }
+            });
+        });
+        
+        // Export for global access
+        window.toggleThemeControls = toggleThemeControls;
+        window.toggleAnimations = toggleAnimations;
+        window.toggleDarkMode = toggleDarkMode;
+        window.toggleHighContrast = toggleHighContrast;
+        window.testComponents = testComponents;
+    </script>
+    
+    <!-- Control Button Styles -->
+    <style>
+        .theme-toggle-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: var(--text-light);
+            border: none;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            font-size: var(--font-size-lg);
+            transition: all var(--transition-fast);
+            z-index: 1000;
+        }
+        
+        .theme-toggle-btn:hover {
+            background: var(--primary-color-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .control-btn {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background: var(--bg-light);
+            color: var(--text-light);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .control-btn:hover {
+            background: var(--border-color);
+            transform: translateY(-1px);
+        }
+        
+        .control-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* No animations class */
+        .no-animations * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+        
+        /* Dark mode variations */
+        .dark-mode {
+            --bg-dark: #000000;
+            --bg-medium: #0a0a0a;
+            --bg-light: #1a1a1a;
+            --text-light: #ffffff;
+            --text-muted: #b8b8b8;
+        }
+        
+        /* High contrast mode */
+        .high-contrast {
+            --border-color: #ffffff;
+            --border-color-light: #ffffff;
+            --text-light: #ffffff;
+            --text-muted: #ffffff;
+            --primary-color: #ffffff;
+            --secondary-color: #ffffff;
+            --accent-color: #ffffff;
+        }
+        
+        .high-contrast .component {
+            border: 2px solid var(--border-color);
+        }
+        
+        .high-contrast .timer-display {
+            border: 2px solid var(--border-color);
+        }
+        
+        .high-contrast .chat-input {
+            border: 2px solid var(--border-color);
+        }
+    </style>
+</body>
+</html>

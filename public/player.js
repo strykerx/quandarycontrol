@@ -1,4 +1,17 @@
 const socket = io();
+window.socket = socket;
+
+console.log('Player.js loaded, socket initialized:', socket);
+
+// Test function to manually trigger lightbox (for debugging)
+window.testLightbox = function() {
+    console.log('Manual lightbox test triggered');
+    showLightbox({
+        mediaId: null,
+        headline: 'TEST LIGHTBOX',
+        autoCloseEnabled: false
+    });
+};
 
 // Connection and DOM elements
 let roomId = null;
@@ -32,6 +45,8 @@ const elements = {
     configDisplay: document.getElementById('config-display'),
     hintContainer: document.getElementById('hint-container'),
     roomInfo: document.getElementById('room-info'),
+    secondaryTimerDisplay: document.getElementById('secondary-timer-display'),
+    secondaryTimerComponent: document.getElementById('secondary-timer-component'),
     // Chat and hint UI
     chatSection: document.getElementById('chat-section'),
     chatLog: document.getElementById('chat-log'),
@@ -40,10 +55,10 @@ const elements = {
     hintOverlay: document.getElementById('hint-overlay'),
     overlayText: document.getElementById('overlay-hint-text'),
     overlayClose: document.getElementById('hint-overlay-close'),
-    lightbox: document.getElementById('lightbox'),
-    lightboxContent: document.getElementById('lightbox-content'),
-    lightboxHeadline: document.getElementById('lightbox-headline'),
-    lightboxClose: document.getElementById('lightbox-close')
+    lightbox: document.querySelector('#fullscreen-media .lightbox'),
+    lightboxContent: document.querySelector('#fullscreen-media .lightbox-media'),
+    lightboxHeadline: document.querySelector('#fullscreen-media .lightbox-headline'),
+    lightboxClose: document.querySelector('#fullscreen-media .lightbox-close')
 };
 
 // Initialize application
@@ -66,9 +81,13 @@ function setupSocketListeners() {
     socket.on('disconnect', handleSocketDisconnected);
     socket.on('timer_update', handleTimerUpdate);
     socket.on('timer_complete', () => {
-        elements.timerDisplay.textContent = '00:00';
+        const inner = ensureTimerInner();
+        if (inner) inner.textContent = '00:00';
         elements.timerDisplay.style.animation = 'timerCompletePulse 1s infinite';
+        fitTimerText();
     });
+    socket.on('secondary_timer_update', handleSecondaryTimerUpdate);
+    socket.on('secondary_timer_complete', handleSecondaryTimerComplete);
     socket.on('variableUpdate', handleVariableUpdate);
     socket.on('hintReceived', handleHintReceived);
     socket.on('chat_message', handleChatMessage);
@@ -78,7 +97,10 @@ function setupSocketListeners() {
     socket.on('clear_chat', handleClearChat);
     socket.on('clear_hints', handleClearHints);
     socket.on('show_lightbox', handleShowLightbox);
-}
+    socket.on('layout_updated', handleLayoutUpdated);
+    
+    console.log('Socket event listeners registered, including show_lightbox');
+ }
 
 // Socket connection handlers
 function handleSocketConnected() {
@@ -87,8 +109,21 @@ function handleSocketConnected() {
     if (roomId && roomId !== 'loading') {
         joinRoom(roomId);
         updateStatusBadge('connected', 'Connected to Room');
+        initializeNotificationManager(roomId);
     } else if (roomShortcode) {
         resolveShortcodeAndJoin(roomShortcode);
+    }
+}
+
+// Initialize notification manager for audio alerts
+async function initializeNotificationManager(resolvedRoomId) {
+    if (window.notificationManager && resolvedRoomId) {
+        try {
+            await window.notificationManager.initialize(resolvedRoomId);
+            console.log('Notification manager initialized for room:', resolvedRoomId);
+        } catch (error) {
+            console.warn('Failed to initialize notification manager:', error);
+        }
     }
 }
 
@@ -99,6 +134,7 @@ function handleSocketDisconnected() {
 
 // Room management
 function joinRoom(id) {
+    window.roomId = id;
     console.log('Joining room:', id);
     socket.emit('join_room', { roomId: id, clientType: 'player' });
 
@@ -123,6 +159,7 @@ async function resolveShortcodeAndJoin(shortcode) {
             roomId = room.id;
             joinRoom(roomId);
             updateStatusBadge('connected', `Connected via ${shortcode}`);
+            initializeNotificationManager(roomId);
         } else {
             updateStatusBadge('error', 'Room not found');
             showNotFound(shortcode);
@@ -141,11 +178,14 @@ async function loadRoomDetails(roomId) {
         if (result.success) {
             const room = result.data;
             updateRoomTitle(room.name || 'Unnamed Room', room.shortcode);
-
-            // If we used shortcode route, update URL to show actual room ID
-            if (roomShortcode && history.replaceState) {
-                history.replaceState(null, null, `/room/${room.id}/player`);
-            }
+        
+                    // If we used shortcode route, update URL to show actual room ID
+                    if (roomShortcode && history.replaceState) {
+                        history.replaceState(null, null, `/room/${room.id}/player`);
+                    }
+                    
+                    // Load layout for this room
+                    loadRoomLayout(room.id);
         }
     } catch (error) {
         console.error('Error loading room details:', error);
@@ -183,10 +223,40 @@ function updateRoomTitle(name, shortcode) {
 
 // Real-time update handlers
 function handleTimerUpdate(data) {
-    if (elements.timerDisplay) {
-        elements.timerDisplay.textContent = formatTime(data.remaining);
+    const inner = ensureTimerInner();
+    if (inner) {
+        inner.textContent = formatTime(data.remaining);
         addTimerAnimation();
+        fitTimerText(); // auto-fit timer into its box
     }
+}
+
+function handleSecondaryTimerUpdate(data) {
+    if (data.enabled && elements.secondaryTimerDisplay) {
+        const inner = ensureSecondaryTimerInner();
+        if (inner) {
+            inner.textContent = formatTime(data.remaining);
+            addSecondaryTimerAnimation();
+            fitSecondaryTimerText();
+        }
+        
+        // Show secondary timer component if enabled
+        if (elements.secondaryTimerComponent) {
+            elements.secondaryTimerComponent.style.display = 'block';
+        }
+    } else if (elements.secondaryTimerComponent) {
+        // Hide secondary timer component if not enabled
+        elements.secondaryTimerComponent.style.display = 'none';
+    }
+}
+
+function handleSecondaryTimerComplete() {
+    const inner = ensureSecondaryTimerInner();
+    if (inner) inner.textContent = '00:00';
+    if (elements.secondaryTimerDisplay) {
+        elements.secondaryTimerDisplay.style.animation = 'timerCompletePulse 1s infinite';
+    }
+    fitSecondaryTimerText();
 }
 
 function handleVariableUpdate(update) {
@@ -198,6 +268,11 @@ function handleVariableUpdate(update) {
 
     renderVariables();
     addVariableAnimation('variable-display');
+
+    // Play variable trigger notification
+    if (window.notificationManager) {
+        window.notificationManager.onVariableTriggered(update.name);
+    }
 }
 
 function handleHintReceived(hint) {
@@ -215,6 +290,11 @@ function handleHintReceived(hint) {
     // Keep only last 10 hints
     hints = hints.slice(0, 10);
     renderHints();
+
+    // Play hint received notification
+    if (window.notificationManager) {
+        window.notificationManager.onHintReceived();
+    }
 
     // Clear "new" flag after animation
     setTimeout(() => {
@@ -259,7 +339,177 @@ function handleClearHints() {
 
 // Lightbox handler for GM-initiated media display
 function handleShowLightbox(data) {
+    console.log('handleShowLightbox called with data:', data);
     showLightbox(data);
+    
+    // Play media received notification
+    if (window.notificationManager) {
+        window.notificationManager.onMediaReceived();
+    }
+}
+
+// Layout update handler for real-time layout changes
+function handleLayoutUpdated(data) {
+    console.log('Layout update received:', data);
+    
+    if (data.layout && data.layout.layouts && data.layout.layouts.default) {
+        const layoutConfig = data.layout;
+        
+        // Update the layout manager if it exists
+        if (window.playerLayoutManager) {
+            window.playerLayoutManager.setLayout('custom', layoutConfig);
+        }
+        
+        // Store the layout in localStorage for persistence
+        localStorage.setItem('quandary-layout-config', JSON.stringify({
+            preset: 'custom',
+            config: layoutConfig,
+            timestamp: Date.now()
+        }));
+        
+        // Apply the layout immediately
+        applyLayoutToPlayer(layoutConfig);
+        fitTimerText(); // ensure timer scales after layout change
+        fitSecondaryTimerText(); // ensure secondary timer scales after layout change
+    }
+}
+
+// Apply layout configuration to player interface
+function applyLayoutToPlayer(layoutConfig) {
+    // Skip automated layout for win95x theme (windows manage their own layout)
+    if (document.body.classList.contains('theme-win95x')) {
+        return;
+    }
+    if (!layoutConfig || !layoutConfig.layouts || !layoutConfig.layouts.default) {
+        console.warn('Invalid layout configuration');
+        return;
+    }
+
+    const defaultLayout = layoutConfig.layouts.default;
+
+    // Prefer explicit player container if present
+    const container = document.getElementById('player-container') || document.querySelector('.container') || document.body;
+
+    // Ensure we have a dedicated grid wrapper to position sections inside
+    let grid = document.getElementById('layout-grid');
+    if (!grid) {
+        grid = document.createElement('div');
+        grid.id = 'layout-grid';
+        container.appendChild(grid);
+    }
+
+    // Reset container classes (do not destroy header/nav)
+    container.classList.remove('layout-default', 'layout-mobile', 'layout-compact');
+    container.classList.add('layout-custom');
+
+    // Configure grid wrapper from layout
+    if (defaultLayout.grid) {
+        const gridConfig = defaultLayout.grid;
+        grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = `repeat(${gridConfig.columns || 12}, 1fr)`;
+        grid.style.gridTemplateRows = `repeat(${gridConfig.rows || 8}, 80px)`;
+        grid.style.gap = gridConfig.gap || '10px';
+    }
+
+    // Apply component layouts into the grid wrapper
+    if (defaultLayout.components) {
+        applyComponentLayouts(defaultLayout.components, grid);
+    }
+
+    console.log('Layout applied to player interface');
+}
+
+// Apply individual component layouts by positioning real sections
+function applyComponentLayouts(components, grid) {
+    // Known section elements mapped by type
+    const typeToId = {
+        timer: 'timer-section',
+        hints: 'hints-section',
+        gameState: 'game-state-section',  // falls back to first .state-section if missing
+        chat: 'chat-section',
+        media: 'media-section',           // optional, may not exist
+        navigation: 'navigation-section'  // optional, may not exist
+    };
+
+    // Prepare a helper to get a section element for a type
+    const getSectionElement = (type) => {
+        const id = typeToId[type];
+        if (!id) return null;
+
+        let el = document.getElementById(id);
+        if (!el) {
+            // Fallbacks
+            if (type === 'gameState') {
+                el = document.querySelector('.state-section');
+            }
+        }
+        return el || null;
+    };
+
+    // Clear previous positioned children inside grid (but do not destroy original sections)
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+    
+    // Ensure lightbox stays at body level (never moved by layout system)
+    const lightbox = document.getElementById('fullscreen-media');
+    if (lightbox && lightbox.parentElement !== document.body) {
+        document.body.appendChild(lightbox);
+    }
+
+    // Track which types were placed to hide unused sections later
+    const placedTypes = new Set();
+
+    // Place each component into grid
+    Object.entries(components).forEach(([componentKey, componentData]) => {
+        const type = componentKey.split('_')[0];
+        if (!componentData.visible || !componentData.position) return;
+
+        const target = getSectionElement(type);
+        if (target) {
+            // Ensure the section is visible and styled for grid positioning
+            target.style.display = '';
+            target.style.gridColumn = componentData.position.gridColumn;
+            target.style.gridRow = componentData.position.gridRow;
+            target.classList.add('positioned-component');
+
+            // Append into the grid wrapper
+            grid.appendChild(target);
+            placedTypes.add(type);
+        } else {
+            // Create a graceful placeholder for unknown/missing sections
+            const placeholder = document.createElement('div');
+            placeholder.className = `layout-component component-${type}`;
+            placeholder.style.gridColumn = componentData.position.gridColumn;
+            placeholder.style.gridRow = componentData.position.gridRow;
+            placeholder.innerHTML = getComponentContent(type, componentData.props || {});
+            grid.appendChild(placeholder);
+            placedTypes.add(type);
+        }
+    });
+
+    // Hide known sections that were not placed by current layout to avoid duplicates
+    Object.entries(typeToId).forEach(([type, id]) => {
+        const el = document.getElementById(id) || (type === 'gameState' ? document.querySelector('.state-section') : null);
+        if (el && !placedTypes.has(type)) {
+            el.style.display = 'none';
+            el.classList.remove('positioned-component');
+            el.style.gridColumn = '';
+            el.style.gridRow = '';
+        }
+    });
+}
+
+// Get content for different component types
+function getComponentContent(type, props = {}) {
+    const contentMap = {
+        timer: () => `<div class="timer-component">${props.content || '⏱️ Timer'}</div>`,
+        hints: () => `<div class="hints-component">${props.content || '💡 Hints'}</div>`,
+        gameState: () => `<div class="gamestate-component">${props.content || '🎮 Game State'}</div>`,
+        chat: () => `<div class="chat-component">${props.content || '💬 Chat'}</div>`,
+        media: () => `<div class="media-component">${props.content || '🖼️ Media'}</div>`,
+        navigation: () => `<div class="navigation-component">${props.content || '🧭 Navigation'}</div>`
+    };
+    
+    return contentMap[type] ? contentMap[type]() : `<div class="unknown-component">${props.content || type}</div>`;
 }
 
 // Rendering functions
@@ -292,6 +542,11 @@ function setupUiHandlers() {
             if (!message || !roomId) return;
             socket.emit('chat_message', { roomId, sender: 'player', message });
             elements.chatInput.value = '';
+
+            // Play chat sent notification
+            if (window.notificationManager) {
+                window.notificationManager.onChatSent();
+            }
         });
     }
     
@@ -328,6 +583,11 @@ function handleChatMessage(payload) {
     // scroll container
     const container = log.parentElement;
     if (container) container.scrollTop = container.scrollHeight;
+
+    // Play chat received notification (when receiving from GM)
+    if (payload.sender === 'gm' && window.notificationManager) {
+        window.notificationManager.onChatReceived();
+    }
 }
 
 async function fetchHintConfigAndToggle() {
@@ -420,86 +680,145 @@ function clearHints() {
      return '2.4vw';
  }
  async function showLightbox(payload) {
-    try {
-        // Normalize payload
-        const {
-            mediaId = null,
-            headline = '',
-            autoCloseEnabled = true,
-            autoCloseSeconds = 5
-        } = payload || {};
-
-        // Reset previous content and timers
-        if (autoCloseTimerId) {
-            clearTimeout(autoCloseTimerId);
-            autoCloseTimerId = null;
-        }
-        elements.lightboxContent.innerHTML = '';
-
-        // Manual close permission and X visibility
-        allowManualClose = !autoCloseEnabled; // when autoclose ON, disable manual close
-        if (elements.lightboxClose) {
-            elements.lightboxClose.style.display = autoCloseEnabled ? 'none' : 'block';
-        }
-
-        // Text-only display when no mediaId provided
-        if (!mediaId) {
-            if (elements.lightboxHeadline) elements.lightboxHeadline.textContent = '';
-            const fontSize = computeAdaptiveFontSize(headline);
-            elements.lightboxContent.innerHTML = `
-                <div style="display:flex;align-items:center;justify-content:center;width:90vw;height:70vh;padding:1rem;text-align:center;">
-                    <div style="white-space:pre-wrap;word-break:break-word;line-height:1.1;font-weight:700;font-size:${fontSize};">${headline || ''}</div>
-                </div>
-            `;
-
-            if (autoCloseEnabled && Number(autoCloseSeconds) > 0) {
-                autoCloseTimerId = setTimeout(() => closeLightbox(), Number(autoCloseSeconds) * 1000);
-            }
-
-            if (elements.lightbox) elements.lightbox.style.display = 'flex';
-            return;
-        }
-
-        // Fetch media details
-        const response = await fetch(`/api/media/${mediaId}`);
-        const res = await response.json();
-
-        if (res.success && res.data) {
-            const media = res.data;
-
-            if (elements.lightboxHeadline) elements.lightboxHeadline.textContent = headline || '';
-
-            if (media.type === 'image') {
-                elements.lightboxContent.innerHTML = `<img src="${media.url}" alt="${media.title || 'Media'}">`;
-
-                if (autoCloseEnabled && Number(autoCloseSeconds) > 0) {
-                    autoCloseTimerId = setTimeout(() => closeLightbox(), Number(autoCloseSeconds) * 1000);
-                }
-            } else if (media.type === 'video') {
-                const video = document.createElement('video');
-                video.src = media.url;
-                video.controls = true;
-                video.autoplay = true;
-
-                // Always autoclose after video length
-                const setVideoAutoClose = () => {
-                    const ms = Math.max(0, (video.duration || 0) * 1000);
-                    if (ms > 0) {
-                        autoCloseTimerId = setTimeout(() => closeLightbox(), ms);
-                    }
-                };
-                video.addEventListener('loadedmetadata', setVideoAutoClose);
-                video.addEventListener('ended', closeLightbox);
-
-                elements.lightboxContent.appendChild(video);
-            }
-
-            if (elements.lightbox) elements.lightbox.style.display = 'flex';
-        }
-    } catch (error) {
-        console.error('Failed to load media for lightbox:', error);
-    }
-}
+     try {
+         console.log('showLightbox called with payload:', payload);
+         console.log('Elements cache lightbox:', elements.lightbox);
+         console.log('Elements cache lightboxContent:', elements.lightboxContent);
+         // Normalize payload
+         const {
+             mediaId = null,
+             headline = '',
+             autoCloseEnabled = true,
+             autoCloseSeconds = 5
+         } = payload || {};
+ 
+         // Reset previous content and timers
+         if (autoCloseTimerId) {
+             clearTimeout(autoCloseTimerId);
+             autoCloseTimerId = null;
+         }
+         elements.lightboxContent.innerHTML = '';
+ 
+         // Manual close permission and X visibility
+         allowManualClose = !autoCloseEnabled; // when autoclose ON, disable manual close
+         if (elements.lightboxClose) {
+             elements.lightboxClose.style.display = autoCloseEnabled ? 'none' : 'block';
+         }
+ 
+         // Text-only display when no mediaId provided
+         if (!mediaId) {
+             if (elements.lightboxHeadline) elements.lightboxHeadline.textContent = '';
+             const fontSize = computeAdaptiveFontSize(headline);
+             elements.lightboxContent.innerHTML = `
+                 <div style="display:flex;align-items:center;justify-content:center;width:90vw;height:70vh;padding:1rem;text-align:center;">
+                     <div style="white-space:pre-wrap;word-break:break-word;line-height:1.1;font-weight:700;font-size:${fontSize};">${headline || ''}</div>
+                 </div>
+             `;
+ 
+             if (autoCloseEnabled && Number(autoCloseSeconds) > 0) {
+                 autoCloseTimerId = setTimeout(() => closeLightbox(), Number(autoCloseSeconds) * 1000);
+             }
+ 
+             // Show the lightbox and fullscreen media container
+             console.log('About to show lightbox');
+             if (elements.lightbox) {
+                 console.log('Adding active class to lightbox element');
+                 elements.lightbox.classList.add('active');
+                 
+                 // Also show the fullscreen media container
+                 const fullscreenMedia = document.getElementById('fullscreen-media');
+                 if (fullscreenMedia) {
+                     console.log('Adding active class to fullscreen-media element');
+                     fullscreenMedia.classList.add('active');
+                     
+                     // Force the correct styles since CSS selector isn't working
+                     fullscreenMedia.style.display = 'flex';
+                     fullscreenMedia.style.alignItems = 'center';
+                     fullscreenMedia.style.justifyContent = 'center';
+                     
+                     // Debug the computed styles
+                     const styles = window.getComputedStyle(fullscreenMedia);
+                     console.log('Fullscreen-media computed display:', styles.display);
+                     console.log('Fullscreen-media computed visibility:', styles.visibility);
+                     console.log('Fullscreen-media computed position:', styles.position);
+                     console.log('Fullscreen-media classes:', fullscreenMedia.className);
+                 } else {
+                     console.log('fullscreen-media element not found!');
+                 }
+             } else {
+                 console.log('elements.lightbox not found!');
+             }
+             return;
+         }
+ 
+         // Fetch media details
+         const response = await fetch(`/api/media/${mediaId}`);
+         const res = await response.json();
+ 
+         if (res.success && res.data) {
+             const media = res.data;
+ 
+             if (elements.lightboxHeadline) elements.lightboxHeadline.textContent = headline || '';
+ 
+             if (media.type === 'image') {
+                 elements.lightboxContent.innerHTML = `<img src="${media.url}" alt="${media.title || 'Media'}">`;
+ 
+                 if (autoCloseEnabled && Number(autoCloseSeconds) > 0) {
+                     autoCloseTimerId = setTimeout(() => closeLightbox(), Number(autoCloseSeconds) * 1000);
+                 }
+             } else if (media.type === 'video') {
+                 const video = document.createElement('video');
+                 video.src = media.url;
+                 video.controls = true;
+                 video.autoplay = true;
+ 
+                 // Always autoclose after video length
+                 const setVideoAutoClose = () => {
+                     const ms = Math.max(0, (video.duration || 0) * 1000);
+                     if (ms > 0) {
+                         autoCloseTimerId = setTimeout(() => closeLightbox(), ms);
+                     }
+                 };
+                 video.addEventListener('loadedmetadata', setVideoAutoClose);
+                 video.addEventListener('ended', closeLightbox);
+ 
+                 elements.lightboxContent.appendChild(video);
+             }
+ 
+             // Show the lightbox and fullscreen media container
+             console.log('About to show lightbox');
+             if (elements.lightbox) {
+                 console.log('Adding active class to lightbox element');
+                 elements.lightbox.classList.add('active');
+                 
+                 // Also show the fullscreen media container
+                 const fullscreenMedia = document.getElementById('fullscreen-media');
+                 if (fullscreenMedia) {
+                     console.log('Adding active class to fullscreen-media element');
+                     fullscreenMedia.classList.add('active');
+                     
+                     // Force the correct styles since CSS selector isn't working
+                     fullscreenMedia.style.display = 'flex';
+                     fullscreenMedia.style.alignItems = 'center';
+                     fullscreenMedia.style.justifyContent = 'center';
+                     
+                     // Debug the computed styles
+                     const styles = window.getComputedStyle(fullscreenMedia);
+                     console.log('Fullscreen-media computed display:', styles.display);
+                     console.log('Fullscreen-media computed visibility:', styles.visibility);
+                     console.log('Fullscreen-media computed position:', styles.position);
+                     console.log('Fullscreen-media classes:', fullscreenMedia.className);
+                 } else {
+                     console.log('fullscreen-media element not found!');
+                 }
+             } else {
+                 console.log('elements.lightbox not found!');
+             }
+         }
+     } catch (error) {
+         console.error('Failed to load media for lightbox:', error);
+     }
+ }
 
 function closeLightbox() {
     // Clear timers and restore manual close
@@ -510,7 +829,15 @@ function closeLightbox() {
     allowManualClose = true;
 
     if (elements.lightbox) {
-        elements.lightbox.style.display = 'none';
+        elements.lightbox.classList.remove('active');
+    }
+
+    // Hide the fullscreen media container
+    const fullscreenMedia = document.getElementById('fullscreen-media');
+    if (fullscreenMedia) {
+        fullscreenMedia.classList.remove('active');
+        // Force hide since CSS selector isn't working properly
+        fullscreenMedia.style.display = 'none';
     }
 
     // Show close button again for next open by default
@@ -601,6 +928,20 @@ function addTimerAnimation() {
     }
 }
 
+function addSecondaryTimerAnimation() {
+    const display = elements.secondaryTimerDisplay;
+    if (display) {
+        display.style.animation = 'none';
+        setTimeout(() => {
+            display.style.animation = 'timerPulse 1s ease-in-out';
+        }, 10);
+
+        setTimeout(() => {
+            display.style.animation = 'none';
+        }, 1000);
+    }
+}
+
 function addVariableAnimation(containerId) {
     const container = document.getElementById(containerId);
     if (container) {
@@ -627,17 +968,153 @@ function requestUpdate() {
     }, 500);
 }
 
+/* Ensure a dedicated inner span we can scale without conflicting with parent animations */
+function ensureTimerInner() {
+    const display = elements.timerDisplay;
+    if (!display) return null;
+    let inner = display.querySelector('#timer-fit');
+    if (!inner) {
+        inner = document.createElement('span');
+        inner.id = 'timer-fit';
+        inner.style.display = 'inline-block';
+        inner.style.transformOrigin = 'center center';
+        inner.style.whiteSpace = 'nowrap';
+        // move current text into inner
+        const current = display.textContent || '';
+        display.textContent = '';
+        inner.textContent = current;
+        display.appendChild(inner);
+    }
+    return inner;
+}
+
+/* Ensure a dedicated inner span for secondary timer */
+function ensureSecondaryTimerInner() {
+    const display = elements.secondaryTimerDisplay;
+    if (!display) return null;
+    let inner = display.querySelector('#secondary-timer-fit');
+    if (!inner) {
+        inner = document.createElement('span');
+        inner.id = 'secondary-timer-fit';
+        inner.style.display = 'inline-block';
+        inner.style.transformOrigin = 'center center';
+        inner.style.whiteSpace = 'nowrap';
+        // move current text into inner
+        const current = display.textContent || '';
+        display.textContent = '';
+        inner.textContent = current;
+        display.appendChild(inner);
+    }
+    return inner;
+}
+
+/* Auto-fit timer number to its box by scaling only the inner span
+   Fix: avoid mutating container height (which caused vertical drift across themes).
+   Measure within the display box and only scale the inner span. */
+function fitTimerText() {
+    const display = elements.timerDisplay;
+    const inner = ensureTimerInner();
+    if (!display || !inner) return;
+
+    // Ensure centering without changing layout height
+    display.style.display = 'flex';
+    display.style.alignItems = 'center';
+    display.style.justifyContent = 'center';
+
+    // If the display isn't laid out yet, retry on next frame
+    const rect = display.getBoundingClientRect();
+    let availW = Math.max(1, rect.width);
+    let availH = Math.max(1, rect.height);
+    if (availW === 1 || availH === 1) {
+        requestAnimationFrame(fitTimerText);
+        return;
+    }
+
+    // Reset inner and measure at a large baseline to capture glyph proportions
+    inner.style.transform = '';
+    inner.style.whiteSpace = 'nowrap';
+    inner.style.fontSize = '220px';
+
+    // Force reflow to ensure measurements are up-to-date after font size change
+    // eslint-disable-next-line no-unused-expressions
+    inner.offsetHeight;
+
+    const contentW = Math.max(1, inner.scrollWidth);
+    const contentH = Math.max(1, inner.scrollHeight);
+
+    // Scale to fit both width and height with a tiny margin
+    const sx = availW / contentW;
+    const sy = availH / contentH;
+    const scale = Math.max(0.1, Math.min(sx, sy) * 0.995);
+
+    inner.style.transformOrigin = 'center center';
+    inner.style.transform = `scale(${scale})`;
+}
+
+/* Auto-fit secondary timer text */
+function fitSecondaryTimerText() {
+    const display = elements.secondaryTimerDisplay;
+    const inner = ensureSecondaryTimerInner();
+    if (!display || !inner) return;
+
+    // Ensure centering without changing layout height
+    display.style.display = 'flex';
+    display.style.alignItems = 'center';
+    display.style.justifyContent = 'center';
+
+    // If the display isn't laid out yet, retry on next frame
+    const rect = display.getBoundingClientRect();
+    let availW = Math.max(1, rect.width);
+    let availH = Math.max(1, rect.height);
+    if (availW === 1 || availH === 1) {
+        requestAnimationFrame(fitSecondaryTimerText);
+        return;
+    }
+
+    // Reset inner and measure at a large baseline to capture glyph proportions
+    inner.style.transform = '';
+    inner.style.whiteSpace = 'nowrap';
+    inner.style.fontSize = '220px';
+
+    // Force reflow to ensure measurements are up-to-date after font size change
+    // eslint-disable-next-line no-unused-expressions
+    inner.offsetHeight;
+
+    const contentW = Math.max(1, inner.scrollWidth);
+    const contentH = Math.max(1, inner.scrollHeight);
+
+    // Scale to fit both width and height with a tiny margin
+    const sx = availW / contentW;
+    const sy = availH / contentH;
+    const scale = Math.max(0.1, Math.min(sx, sy) * 0.995);
+
+    inner.style.transformOrigin = 'center center';
+    inner.style.transform = `scale(${scale})`;
+}
+
 // Setup initial state
 function loadInitialState() {
     renderVariables();
     renderHints();
+    ensureTimerInner();
+    ensureSecondaryTimerInner();
+    fitTimerText();
+    fitSecondaryTimerText();
 
     // Auto-refresh status periodically
     setInterval(() => {
         if (socket.connected) {
             updateStatusBadge('connected', 'Connected to Room');
+            fitTimerText();
+            fitSecondaryTimerText();
         }
     }, 30000); // Every 30 seconds
+
+    // Refit on resize
+    window.addEventListener('resize', () => {
+        requestAnimationFrame(fitTimerText);
+        requestAnimationFrame(fitSecondaryTimerText);
+    });
 }
 
 // Export for global access if needed
@@ -784,31 +1261,62 @@ function showThemeChangeNotification(theme) {
 }
 
 // Add slide animations for theme notifications
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideUp {
-        from {
-            transform: translate(-50%, 100%);
-            opacity: 0;
+let styleEl = document.getElementById('player-slide-animations');
+if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'player-slide-animations';
+    styleEl.textContent = `
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 100%);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, 0);
+                opacity: 0.9;
+            }
         }
-        to {
-            transform: translate(-50%, 0);
-            opacity: 0.9;
+        
+        @keyframes slideDown {
+            from {
+                transform: translate(-50%, 0);
+                opacity: 0.9;
+            }
+            to {
+                transform: translate(-50%, 100%);
+                opacity: 0;
+            }
         }
+    `;
+    document.head.appendChild(styleEl);
+}
+
+// Load room layout from server
+async function loadRoomLayout(roomId) {
+    try {
+        const response = await fetch(`/rooms/${roomId}/layout`);
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.layouts && result.data.layouts.default) {
+            const layoutConfig = result.data;
+            console.log('Layout loaded from server:', layoutConfig);
+            
+            // Apply the layout to the player interface
+            applyLayoutToPlayer(layoutConfig);
+            
+            // Store the layout in localStorage for persistence
+            localStorage.setItem('quandary-layout-config', JSON.stringify({
+                preset: 'custom',
+                config: layoutConfig,
+                timestamp: Date.now()
+            }));
+        } else {
+            console.log('No saved layout found for this room');
+        }
+    } catch (error) {
+        console.error('Error loading room layout:', error);
     }
-    
-    @keyframes slideDown {
-        from {
-            transform: translate(-50%, 0);
-            opacity: 0.9;
-        }
-        to {
-            transform: translate(-50%, 100%);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
+}
 
 // Export theme functions for global access
 window.playerTheme = {
@@ -1140,6 +1648,17 @@ class PlayerLayoutManager {
     reorganizeElements(layoutType) {
         const container = this.container;
         if (!container) return;
+
+        // Skip for win95x theme: windows manage their own layout
+        if (document.body.classList.contains('theme-win95x')) {
+            return;
+        }
+
+        // If a custom grid is active, do not reorganize sections.
+        // The grid-based renderer (applyLayoutToPlayer) controls positioning.
+        if (layoutType === 'custom' && document.getElementById('layout-grid')) {
+            return;
+        }
         
         // Get all main sections
         const timerSection = document.querySelector('.timer-section');

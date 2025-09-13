@@ -1,0 +1,31 @@
+{
+  "name": "win95x",
+  "version": "1.0.0",
+  "description": "Authentic Windows 95 theme with moveable windows and taskbar",
+  "author": "Rooroo Developer",
+  "created_at": "2025-09-13T02:24:34.438Z",
+  "updated_at": "2025-09-13T02:24:34.440Z",
+  "components": {
+    "timer": {
+      "enabled": true
+    },
+    "chat": {
+      "enabled": true
+    },
+    "hints": {
+      "enabled": true
+    },
+    "variables": {
+      "enabled": true
+    },
+    "media": {
+      "enabled": true
+    },
+    "room-info": {
+      "enabled": true
+    },
+    "game-state": {
+      "enabled": true
+    }
+  }
+}

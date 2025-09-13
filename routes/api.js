@@ -116,27 +116,38 @@ router.get('/shortcode/:shortcode', (req, res) => {
  */
 router.post('/rooms', (req, res) => {
   try {
-    const { name, config = {}, timer_duration = 0, api_variables = {}, hint_config = {} } = req.body;
+    const { name, config = {}, timer_duration = 0, secondary_timer_enabled = false, secondary_timer_duration = 0, api_variables = {}, hint_config = {}, theme = 'example-theme' } = req.body;
 
     if (!name) {
       return res.status(400).json({ success: false, error: 'Room name is required' });
+    }
+
+    // Validate theme exists
+    const themePath = path.join(__dirname, '..', 'themes', theme, 'index.html');
+    if (!fs.existsSync(themePath)) {
+      return res.status(400).json({ success: false, error: `Theme '${theme}' not found` });
     }
 
     const db = getDatabase();
     const roomId = nanoid();
     const shortcode = generateShortcode(db);
 
+    // Update config to include theme
+    const roomConfig = { ...config, theme };
+
     const insertStmt = db.prepare(`
-      INSERT INTO rooms (id, shortcode, name, config, timer_duration, api_variables, hint_config)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO rooms (id, shortcode, name, config, timer_duration, secondary_timer_enabled, secondary_timer_duration, api_variables, hint_config)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     insertStmt.run(
       roomId,
       shortcode,
       name,
-      JSON.stringify(config),
+      JSON.stringify(roomConfig),
       timer_duration,
+      secondary_timer_enabled,
+      secondary_timer_duration,
       JSON.stringify(api_variables),
       JSON.stringify(hint_config || {})
     );
@@ -154,7 +165,7 @@ router.post('/rooms', (req, res) => {
 router.put('/rooms/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { name, config, timer_duration, api_variables, hint_config } = req.body;
+    const { name, config, timer_duration, secondary_timer_enabled, secondary_timer_duration, api_variables, hint_config } = req.body;
     
     const db = getDatabase();
     const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id);
@@ -177,6 +188,14 @@ router.put('/rooms/:id', (req, res) => {
     if (timer_duration !== undefined) {
       updateFields.push('timer_duration = ?');
       updateValues.push(timer_duration);
+    }
+    if (secondary_timer_enabled !== undefined) {
+      updateFields.push('secondary_timer_enabled = ?');
+      updateValues.push(secondary_timer_enabled);
+    }
+    if (secondary_timer_duration !== undefined) {
+      updateFields.push('secondary_timer_duration = ?');
+      updateValues.push(secondary_timer_duration);
     }
     if (api_variables !== undefined) {
       updateFields.push('api_variables = ?');
@@ -832,6 +851,30 @@ router.get('/rooms/:id/media', (req, res) => {
  * Create media item for a room
  * Body: { type: 'image'|'video'|'audio'|'other', title?, url, thumbnail_url?, metadata?, order_index? }
  */
+// General upload endpoint for layout builder
+router.post('/upload', upload.single('file'), (req, res) => {
+  try {
+    if (req.file) {
+      const filename = req.file.filename;
+      const url = `/uploads/${filename}`;
+      
+      return res.json({
+        success: true,
+        url,
+        filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        uploaded_at: new Date().toISOString()
+      });
+    }
+    
+    return res.status(400).json({ success: false, error: 'No file uploaded' });
+  } catch (error) {
+    console.error('Upload error:', error);
+    return res.status(500).json({ success: false, error: 'Upload failed' });
+  }
+});
+
 router.post('/rooms/:id/media', upload.single('media'), (req, res) => {
   try {
     const { id } = req.params;
@@ -1365,4 +1408,1175 @@ router.get('/layout/presets', (req, res) => {
   }
 });
 
-module.exports = router;
+/**
+ * Layout Template API Endpoints
+ */
+
+/**
+ * Get all layout templates
+ */
+router.get('/layout-templates', (req, res) => {
+  try {
+    const db = getDatabase();
+    
+    const templates = db.prepare('SELECT * FROM layout_templates ORDER BY is_system DESC, name ASC').all();
+    
+    // Parse layout JSON for each template
+    const parsedTemplates = templates.map(template => ({
+      ...template,
+      layout: JSON.parse(template.layout || '{}')
+    }));
+    
+    res.json({ success: true, data: parsedTemplates });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Get a specific layout template
+ */
+router.get('/layout-templates/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    
+    const template = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(id);
+    
+    if (!template) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+    
+    // Parse layout JSON
+    const parsedTemplate = {
+      ...template,
+      layout: JSON.parse(template.layout || '{}')
+    };
+    
+    res.json({ success: true, data: parsedTemplate });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Create a new layout template
+ */
+router.post('/layout-templates', (req, res) => {
+  try {
+    const { name, description, layout, is_system = false } = req.body;
+    
+    if (!name || !layout) {
+      return res.status(400).json({
+        success: false,
+        error: 'Name and layout are required'
+      });
+    }
+    
+    if (typeof layout !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Layout must be an object'
+      });
+    }
+    
+    const db = getDatabase();
+    const templateId = nanoid();
+    
+    const insertStmt = db.prepare(`
+      INSERT INTO layout_templates (id, name, description, layout, is_system)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    
+    insertStmt.run(
+      templateId,
+      name,
+      description || '',
+      JSON.stringify(layout),
+      is_system ? 1 : 0
+    );
+    
+    const newTemplate = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(templateId);
+    
+    // Parse layout JSON for response
+    const parsedTemplate = {
+      ...newTemplate,
+      layout: JSON.parse(newTemplate.layout || '{}')
+    };
+    
+    res.status(201).json({ success: true, data: parsedTemplate });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Update a layout template
+ */
+router.put('/layout-templates/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, layout, is_system } = req.body;
+    
+    const db = getDatabase();
+    const template = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(id);
+    
+    if (!template) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+    
+    const updateFields = [];
+    const updateValues = [];
+    
+    if (name !== undefined) {
+      updateFields.push('name = ?');
+      updateValues.push(name);
+    }
+    if (description !== undefined) {
+      updateFields.push('description = ?');
+      updateValues.push(description);
+    }
+    if (layout !== undefined) {
+      if (typeof layout !== 'object') {
+        return res.status(400).json({
+          success: false,
+          error: 'Layout must be an object'
+        });
+      }
+      updateFields.push('layout = ?');
+      updateValues.push(JSON.stringify(layout));
+    }
+    if (is_system !== undefined) {
+      updateFields.push('is_system = ?');
+      updateValues.push(is_system ? 1 : 0);
+    }
+    
+    if (updateFields.length === 0) {
+      return res.status(400).json({ success: false, error: 'No fields to update' });
+    }
+    
+    updateValues.push(id);
+    
+    const updateStmt = db.prepare(`
+      UPDATE layout_templates
+      SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    
+    const result = updateStmt.run(...updateValues);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+    
+    const updatedTemplate = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(id);
+    
+    // Parse layout JSON for response
+    const parsedTemplate = {
+      ...updatedTemplate,
+      layout: JSON.parse(updatedTemplate.layout || '{}')
+    };
+    
+    res.json({ success: true, data: parsedTemplate });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Delete a layout template
+ */
+router.delete('/layout-templates/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    
+    const template = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(id);
+    if (!template) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+    
+    // Don't allow deletion of system templates
+    if (template.is_system) {
+      return res.status(403).json({ success: false, error: 'Cannot delete system templates' });
+    }
+    
+    const deleteStmt = db.prepare('DELETE FROM layout_templates WHERE id = ?');
+    const result = deleteStmt.run(id);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+    
+    res.json({ success: true, message: 'Template deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Apply a template to a room
+ */
+router.post('/rooms/:roomId/apply-template/:templateId', (req, res) => {
+  try {
+    const { roomId, templateId } = req.params;
+    const db = getDatabase();
+    
+    // Check if room exists
+    const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(roomId);
+    if (!room) {
+      return res.status(404).json({ success: false, error: 'Room not found' });
+    }
+    
+    // Get template
+    const template = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(templateId);
+    if (!template) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+    
+    // Parse room config
+    let config = {};
+    try {
+      config = JSON.parse(room.config || '{}');
+    } catch (e) {
+      console.warn(`Invalid JSON in config for room ${roomId}:`, e);
+      config = {};
+    }
+    
+    // Parse template layout
+    let layout = {};
+    try {
+      layout = JSON.parse(template.layout || '{}');
+    } catch (e) {
+      console.warn(`Invalid JSON in layout for template ${templateId}:`, e);
+      return res.status(500).json({ success: false, error: 'Invalid template layout' });
+    }
+    
+    // Update room config with template layout
+    config.layout = layout;
+    
+    // Update room
+    const updateStmt = db.prepare('UPDATE rooms SET config = ? WHERE id = ?');
+    updateStmt.run(JSON.stringify(config), roomId);
+    
+    // Broadcast layout update via Socket.IO if available
+    try {
+      const { io } = require('../server');
+      io.to(roomId).emit('layout_updated', {
+        layout: layout,
+        timestamp: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn('Socket.IO not available for layout broadcast');
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        roomId,
+        templateId,
+        layout,
+        message: 'Template applied successfully'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Theme API Endpoints
+ */
+
+
+/**
+ * Get a specific theme
+ */
+router.get('/themes/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    
+    const theme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(id);
+    
+    if (!theme) {
+      return res.status(404).json({ success: false, error: 'Theme not found' });
+    }
+    
+    // Parse JSON fields
+    const parsedTheme = {
+      ...theme,
+      layout: JSON.parse(theme.layout || '{}'),
+      theme_meta: JSON.parse(theme.theme_meta || '{}')
+    };
+    
+    // If this is a child theme, fetch parent theme data
+    if (theme.parent_theme_id) {
+      const parentTheme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(theme.parent_theme_id);
+      if (parentTheme) {
+        parsedTheme.parent = {
+          ...parentTheme,
+          layout: JSON.parse(parentTheme.layout || '{}'),
+          theme_meta: JSON.parse(parentTheme.theme_meta || '{}')
+        };
+      }
+    }
+    
+    // Get theme assets
+    const assets = db.prepare('SELECT * FROM theme_assets WHERE theme_id = ? ORDER BY file_path ASC').all(id);
+    parsedTheme.assets = assets;
+    
+    res.json({ success: true, data: parsedTheme });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Create a new theme
+ */
+// OLD DATABASE-BASED ENDPOINT - COMMENTED OUT
+/*
+router.post('/themes', (req, res) => {
+  try {
+    const { name, description, layout, theme_meta = {}, is_system = false, parent_theme_id } = req.body;
+    
+    if (!name || !layout) {
+      return res.status(400).json({
+        success: false,
+        error: 'Name and layout are required'
+      });
+    }
+    
+    if (typeof layout !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Layout must be an object'
+      });
+    }
+    
+    const db = getDatabase();
+    const themeId = nanoid();
+    
+    // Validate parent theme if specified
+    if (parent_theme_id) {
+      const parentTheme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(parent_theme_id);
+      if (!parentTheme) {
+        return res.status(400).json({
+          success: false,
+          error: 'Parent theme not found'
+        });
+      }
+    }
+    
+    const insertStmt = db.prepare(`
+      INSERT INTO layout_templates (id, name, description, layout, theme_meta, is_system, is_child, parent_theme_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    insertStmt.run(
+      themeId,
+      name,
+      description || '',
+      JSON.stringify(layout),
+      JSON.stringify(theme_meta || {}),
+      is_system ? 1 : 0,
+      parent_theme_id ? 1 : 0,
+      parent_theme_id || null
+    );
+    
+    const newTheme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(themeId);
+    
+    // Parse JSON fields for response
+    const parsedTheme = {
+      ...newTheme,
+      layout: JSON.parse(newTheme.layout || '{}'),
+      theme_meta: JSON.parse(newTheme.theme_meta || '{}')
+    };
+    
+    res.status(201).json({ success: true, data: parsedTheme });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+*/
+
+/**
+ * Update a theme
+ */
+// OLD DATABASE-BASED ENDPOINT - COMMENTED OUT  
+/*
+router.put('/themes/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, layout, theme_meta, is_system, parent_theme_id } = req.body;
+    
+    const db = getDatabase();
+    const theme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(id);
+    
+    if (!theme) {
+      return res.status(404).json({ success: false, error: 'Theme not found' });
+    }
+    
+    const updateFields = [];
+    const updateValues = [];
+    
+    if (name !== undefined) {
+      updateFields.push('name = ?');
+      updateValues.push(name);
+    }
+    if (description !== undefined) {
+      updateFields.push('description = ?');
+      updateValues.push(description);
+    }
+    if (layout !== undefined) {
+      if (typeof layout !== 'object') {
+        return res.status(400).json({
+          success: false,
+          error: 'Layout must be an object'
+        });
+      }
+      updateFields.push('layout = ?');
+      updateValues.push(JSON.stringify(layout));
+    }
+    if (theme_meta !== undefined) {
+      updateFields.push('theme_meta = ?');
+      updateValues.push(JSON.stringify(theme_meta || {}));
+    }
+    if (is_system !== undefined) {
+      updateFields.push('is_system = ?');
+      updateValues.push(is_system ? 1 : 0);
+    }
+    if (parent_theme_id !== undefined) {
+      // Validate parent theme if specified
+      if (parent_theme_id) {
+        const parentTheme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(parent_theme_id);
+        if (!parentTheme) {
+          return res.status(400).json({
+            success: false,
+            error: 'Parent theme not found'
+          });
+        }
+        // Check for circular reference
+        if (parent_theme_id === id) {
+          return res.status(400).json({
+            success: false,
+            error: 'Theme cannot be its own parent'
+          });
+        }
+      }
+      updateFields.push('parent_theme_id = ?');
+      updateFields.push('is_child = ?');
+      updateValues.push(parent_theme_id || null);
+      updateValues.push(parent_theme_id ? 1 : 0);
+    }
+    
+    if (updateFields.length === 0) {
+      return res.status(400).json({ success: false, error: 'No fields to update' });
+    }
+    
+    updateValues.push(id);
+    
+    const updateStmt = db.prepare(`
+      UPDATE layout_templates
+      SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    
+    const result = updateStmt.run(...updateValues);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'Theme not found' });
+    }
+    
+    const updatedTheme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(id);
+    
+    // Parse JSON fields for response
+    const parsedTheme = {
+      ...updatedTheme,
+      layout: JSON.parse(updatedTheme.layout || '{}'),
+      theme_meta: JSON.parse(updatedTheme.theme_meta || '{}')
+    };
+    
+    res.json({ success: true, data: parsedTheme });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+*/
+
+/**
+ * Delete a theme
+ */
+router.delete('/themes/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    
+    const theme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(id);
+    if (!theme) {
+      return res.status(404).json({ success: false, error: 'Theme not found' });
+    }
+    
+    // Don't allow deletion of system themes
+    if (theme.is_system) {
+      return res.status(403).json({ success: false, error: 'Cannot delete system themes' });
+    }
+    
+    // Check if this theme is a parent to other themes
+    const childThemes = db.prepare('SELECT COUNT(*) as count FROM layout_templates WHERE parent_theme_id = ?').get(id);
+    if (childThemes.count > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot delete theme that has child themes'
+      });
+    }
+    
+    // Delete theme assets first
+    db.prepare('DELETE FROM theme_assets WHERE theme_id = ?').run(id);
+    
+    // Delete theme
+    const deleteStmt = db.prepare('DELETE FROM layout_templates WHERE id = ?');
+    const result = deleteStmt.run(id);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'Theme not found' });
+    }
+    
+    res.json({ success: true, message: 'Theme deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Apply a theme to a room
+ */
+router.post('/rooms/:roomId/theme', (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const { themeId } = req.body;
+    
+    if (!themeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Theme ID is required'
+      });
+    }
+    
+    const db = getDatabase();
+    
+    // Check if room exists
+    const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(roomId);
+    if (!room) {
+      return res.status(404).json({ success: false, error: 'Room not found' });
+    }
+    
+    // Get theme
+    const theme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(themeId);
+    if (!theme) {
+      return res.status(404).json({ success: false, error: 'Theme not found' });
+    }
+    
+    // Parse room config
+    let config = {};
+    try {
+      config = JSON.parse(room.config || '{}');
+    } catch (e) {
+      console.warn(`Invalid JSON in config for room ${roomId}:`, e);
+      config = {};
+    }
+    
+    // Parse theme layout
+    let layout = {};
+    try {
+      layout = JSON.parse(theme.layout || '{}');
+    } catch (e) {
+      console.warn(`Invalid JSON in layout for theme ${themeId}:`, e);
+      return res.status(500).json({ success: false, error: 'Invalid theme layout' });
+    }
+    
+    // Update room config with theme layout and theme ID
+    config.layout = layout;
+    config.themeId = themeId;
+    
+    // Update room
+    const updateStmt = db.prepare('UPDATE rooms SET config = ? WHERE id = ?');
+    updateStmt.run(JSON.stringify(config), roomId);
+    
+    // Broadcast layout update via Socket.IO if available
+    try {
+      const { io } = require('../server');
+      io.to(roomId).emit('layout_updated', {
+        layout: layout,
+        themeId: themeId,
+        timestamp: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn('Socket.IO not available for layout broadcast');
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        roomId,
+        themeId,
+        layout,
+        message: 'Theme applied successfully'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Get theme assets
+ */
+router.get('/themes/:themeId/assets', (req, res) => {
+  try {
+    const { themeId } = req.params;
+    const db = getDatabase();
+    
+    // Verify theme exists
+    const theme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(themeId);
+    if (!theme) {
+      return res.status(404).json({ success: false, error: 'Theme not found' });
+    }
+    
+    const assets = db.prepare('SELECT * FROM theme_assets WHERE theme_id = ? ORDER BY file_path ASC').all(themeId);
+    
+    res.json({ success: true, data: assets });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Add or update theme asset
+ */
+router.put('/themes/:themeId/assets', (req, res) => {
+  try {
+    const { themeId } = req.params;
+    const { file_path, content } = req.body;
+    
+    if (!file_path || content === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'File path and content are required'
+      });
+    }
+    
+    const db = getDatabase();
+    
+    // Verify theme exists
+    const theme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(themeId);
+    if (!theme) {
+      return res.status(404).json({ success: false, error: 'Theme not found' });
+    }
+    
+    // Check if asset already exists
+    const existingAsset = db.prepare('SELECT * FROM theme_assets WHERE theme_id = ? AND file_path = ?').get(themeId, file_path);
+    
+    if (existingAsset) {
+      // Update existing asset
+      const updateStmt = db.prepare('UPDATE theme_assets SET content = ? WHERE theme_id = ? AND file_path = ?');
+      updateStmt.run(content, themeId, file_path);
+    } else {
+      // Create new asset
+      const assetId = nanoid();
+      const insertStmt = db.prepare('INSERT INTO theme_assets (id, theme_id, file_path, content) VALUES (?, ?, ?, ?)');
+      insertStmt.run(assetId, themeId, file_path, content);
+    }
+    
+    const asset = db.prepare('SELECT * FROM theme_assets WHERE theme_id = ? AND file_path = ?').get(themeId, file_path);
+    
+    res.json({ success: true, data: asset });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Delete theme asset
+ */
+router.delete('/themes/:themeId/assets/:filePath', (req, res) => {
+  try {
+    const { themeId, filePath } = req.params;
+    const db = getDatabase();
+    
+    // Verify theme exists
+    const theme = db.prepare('SELECT * FROM layout_templates WHERE id = ?').get(themeId);
+    if (!theme) {
+      return res.status(404).json({ success: false, error: 'Theme not found' });
+    }
+    
+    const result = db.prepare('DELETE FROM theme_assets WHERE theme_id = ? AND file_path = ?').run(themeId, filePath);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'Asset not found' });
+    }
+    
+    res.json({ success: true, message: 'Asset deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Get available themes
+ */
+router.get('/themes', (req, res) => {
+  try {
+    const themesDir = path.join(__dirname, '..', 'themes');
+    const themes = [];
+    
+    if (!fs.existsSync(themesDir)) {
+      return res.json({ success: true, data: [] });
+    }
+    
+    const entries = fs.readdirSync(themesDir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const themeName = entry.name;
+        const configPath = path.join(themesDir, themeName, 'theme-config.json');
+        const indexPath = path.join(themesDir, themeName, 'index.html');
+        
+        // Only include themes that have both config and index files
+        if (fs.existsSync(configPath) && fs.existsSync(indexPath)) {
+          try {
+            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            themes.push({
+              name: themeName,
+              displayName: config.name || themeName,
+              description: config.description || '',
+              version: config.version || '1.0.0',
+              author: config.author || '',
+              components: config.components || {}
+            });
+          } catch (error) {
+            console.warn(`Failed to parse theme config for ${themeName}:`, error);
+          }
+        }
+      }
+    }
+    
+    res.json({ success: true, data: themes });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Update theme configuration
+ */
+router.put('/themes/:themeName', (req, res) => {
+  try {
+    const { themeName } = req.params;
+    const themeData = req.body;
+    
+    // Validate theme name
+    if (!themeName || !themeName.match(/^[a-zA-Z0-9-_]+$/)) {
+      return res.status(400).json({ success: false, error: 'Invalid theme name' });
+    }
+    
+    const themeDir = path.join(__dirname, '..', 'themes', themeName);
+    const configPath = path.join(themeDir, 'theme-config.json');
+    
+    if (!fs.existsSync(themeDir)) {
+      return res.status(404).json({ success: false, error: 'Theme not found' });
+    }
+    
+    // Update the theme configuration
+    themeData.updated_at = new Date().toISOString();
+    
+    fs.writeFileSync(configPath, JSON.stringify(themeData, null, 2));
+    
+    res.json({ success: true, data: themeData });
+  } catch (error) {
+    console.error('Error updating theme:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Create new theme
+ */
+router.post('/themes', (req, res) => {
+  try {
+    const themeData = req.body;
+    const themeName = themeData.name;
+    
+    // Validate theme name
+    if (!themeName || !themeName.match(/^[a-zA-Z0-9-_]+$/)) {
+      return res.status(400).json({ success: false, error: 'Invalid theme name' });
+    }
+    
+    const themeDir = path.join(__dirname, '..', 'themes', themeName);
+    
+    // Check if theme already exists
+    if (fs.existsSync(themeDir)) {
+      return res.status(409).json({ success: false, error: 'Theme already exists' });
+    }
+    
+    // Create theme directory
+    fs.mkdirSync(themeDir, { recursive: true });
+    
+    // Set creation time
+    themeData.created_at = new Date().toISOString();
+    themeData.updated_at = themeData.created_at;
+    
+    // Write theme config
+    const configPath = path.join(themeDir, 'theme-config.json');
+    fs.writeFileSync(configPath, JSON.stringify(themeData, null, 2));
+    
+    // Create basic theme files if they don't exist
+    const indexPath = path.join(themeDir, 'index.html');
+    if (!fs.existsSync(indexPath)) {
+      const basicHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${themeData.displayName || themeName}</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="theme-container">
+        <header class="theme-header">
+            [room-info]
+            [timer]
+        </header>
+        
+        <main class="theme-main">
+            <div class="left-panel">
+                [hints]
+                [variables]
+            </div>
+            <div class="right-panel">
+                [chat]
+                [game-state]
+            </div>
+        </main>
+    </div>
+    
+    [media]
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/player.js"></script>
+</body>
+</html>`;
+      fs.writeFileSync(indexPath, basicHTML);
+    }
+    
+    const stylePath = path.join(themeDir, 'style.css');
+    if (!fs.existsSync(stylePath)) {
+      const basicCSS = `/* ${themeData.displayName || themeName} Theme Styles */
+
+.theme-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.theme-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.theme-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.left-panel, .right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Component styling */
+.timer-component,
+.hints-component,
+.variables-component,
+.chat-component,
+.game-state-component {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    .theme-main {
+        grid-template-columns: 1fr;
+    }
+}`;
+      fs.writeFileSync(stylePath, basicCSS);
+    }
+    
+    // Create basic JavaScript file
+    const scriptPath = path.join(themeDir, 'script.js');
+    if (!fs.existsSync(scriptPath)) {
+      const basicJS = `// ${themeData.displayName || themeName} Theme JavaScript
+
+// Theme-specific JavaScript functionality
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('${themeData.displayName || themeName} theme loaded');
+    
+    // Initialize theme-specific features
+    initializeTheme();
+});
+
+function initializeTheme() {
+    // Add custom theme functionality here
+    
+    // Example: Custom timer formatting
+    const timerElements = document.querySelectorAll('.timer-component');
+    timerElements.forEach(timer => {
+        timer.classList.add('${themeName}-timer');
+    });
+    
+    // Example: Custom chat styling
+    const chatElements = document.querySelectorAll('.chat-component');
+    chatElements.forEach(chat => {
+        chat.classList.add('${themeName}-chat');
+    });
+    
+    // Add any other theme-specific initialization here
+}
+
+// Export theme configuration if needed
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        name: '${themeName}',
+        version: '${themeData.version || '1.0.0'}',
+        initialize: initializeTheme
+    };
+}`;
+      fs.writeFileSync(scriptPath, basicJS);
+    }
+    
+    res.json({ success: true, data: themeData });
+  } catch (error) {
+    console.error('Error creating theme:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Notification Audio API Endpoints
+ */
+
+/**
+ * Upload notification audio file
+ */
+router.post('/rooms/:id/notifications/audio', upload.single('audio'), (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No audio file uploaded' });
+    }
+    
+    // Validate audio file type
+    const { mimetype, originalname, filename, size } = req.file;
+    if (!mimetype.startsWith('audio/')) {
+      return res.status(400).json({ success: false, error: 'File must be an audio file' });
+    }
+    
+    const db = getDatabase();
+    const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id);
+    if (!room) {
+      return res.status(404).json({ success: false, error: 'Room not found' });
+    }
+    
+    const audioId = nanoid();
+    const filePath = `/uploads/${filename}`;
+    
+    db.prepare(`
+      INSERT INTO notification_audio (id, room_id, filename, original_name, file_path, file_size, mime_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(audioId, id, filename, originalname, filePath, size, mimetype);
+    
+    const created = db.prepare('SELECT * FROM notification_audio WHERE id = ?').get(audioId);
+    res.status(201).json({ success: true, data: created });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Get notification audio files for a room
+ */
+router.get('/rooms/:id/notifications/audio', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    
+    const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id);
+    if (!room) {
+      return res.status(404).json({ success: false, error: 'Room not found' });
+    }
+    
+    const audioFiles = db.prepare('SELECT * FROM notification_audio WHERE room_id = ? ORDER BY created_at ASC').all(id);
+    res.json({ success: true, data: audioFiles });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Delete notification audio file
+ */
+router.delete('/rooms/:id/notifications/audio/:audioId', (req, res) => {
+  try {
+    const { id, audioId } = req.params;
+    const db = getDatabase();
+    
+    const audio = db.prepare('SELECT * FROM notification_audio WHERE id = ? AND room_id = ?').get(audioId, id);
+    if (!audio) {
+      return res.status(404).json({ success: false, error: 'Audio file not found' });
+    }
+    
+    // Delete from database
+    const result = db.prepare('DELETE FROM notification_audio WHERE id = ?').run(audioId);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'Audio file not found' });
+    }
+    
+    // Optionally delete physical file (uncomment if needed)
+    // const fs = require('fs');
+    // try {
+    //   fs.unlinkSync(path.join(__dirname, '..', 'public', audio.file_path));
+    // } catch (err) {
+    //   console.warn('Could not delete physical file:', err);
+    // }
+    
+    res.json({ success: true, message: 'Audio file deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Get notification settings for a room
+ */
+router.get('/rooms/:id/notifications/settings', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    
+    const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id);
+    if (!room) {
+      return res.status(404).json({ success: false, error: 'Room not found' });
+    }
+    
+    const settings = db.prepare(`
+      SELECT ns.*, na.original_name, na.file_path 
+      FROM notification_settings ns 
+      LEFT JOIN notification_audio na ON ns.audio_id = na.id 
+      WHERE ns.room_id = ? 
+      ORDER BY ns.setting_type ASC
+    `).all(id);
+    
+    // Parse settings JSON
+    const parsedSettings = settings.map(setting => ({
+      ...setting,
+      settings: JSON.parse(setting.settings || '{}')
+    }));
+    
+    res.json({ success: true, data: parsedSettings });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Update notification settings
+ */
+router.put('/rooms/:id/notifications/settings', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { settings } = req.body;
+    
+    console.log('Received notification settings update:', { id, settings });
+    
+    if (!Array.isArray(settings)) {
+      return res.status(400).json({ success: false, error: 'Settings must be an array' });
+    }
+    
+    const db = getDatabase();
+    const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id);
+    if (!room) {
+      return res.status(404).json({ success: false, error: 'Room not found' });
+    }
+    
+    const transaction = db.transaction(() => {
+      // Clear existing settings
+      db.prepare('DELETE FROM notification_settings WHERE room_id = ?').run(id);
+      
+      // Insert new settings
+      const insertStmt = db.prepare(`
+        INSERT INTO notification_settings (id, room_id, setting_type, audio_id, enabled, settings)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      
+      for (const setting of settings) {
+        const settingId = nanoid();
+        const cleanAudioId = setting.audio_id === '' ? null : setting.audio_id;
+        const cleanEnabled = setting.enabled ? 1 : 0;
+        const cleanSettings = JSON.stringify(setting.settings || {});
+        
+        console.log('Inserting setting:', {
+          settingId,
+          roomId: id,
+          settingType: setting.setting_type,
+          audioId: cleanAudioId,
+          enabled: cleanEnabled,
+          settings: cleanSettings
+        });
+        
+        insertStmt.run(
+          settingId,
+          id,
+          setting.setting_type,
+          cleanAudioId,
+          cleanEnabled,
+          cleanSettings
+        );
+      }
+    });
+    
+    transaction();
+    
+    // Return updated settings
+    const updatedSettings = db.prepare(`
+      SELECT ns.*, na.original_name, na.file_path 
+      FROM notification_settings ns 
+      LEFT JOIN notification_audio na ON ns.audio_id = na.id 
+      WHERE ns.room_id = ? 
+      ORDER BY ns.setting_type ASC
+    `).all(id);
+    
+    const parsedSettings = updatedSettings.map(setting => ({
+      ...setting,
+      settings: JSON.parse(setting.settings || '{}')
+    }));
+    
+    res.json({ success: true, data: parsedSettings });
+  } catch (error) {
+    console.error('Error updating notification settings:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+module.exports = { router, getRoomByShortcode };

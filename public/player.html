@@ -285,6 +285,102 @@
             25% { transform: translateX(-5px); }
             75% { transform: translateX(5px); }
         }
+
+        /* Component Integration Animations */
+        @keyframes timer-update {
+            0% { transform: scale(1); color: inherit; }
+            50% { transform: scale(1.05); color: #667eea; }
+            100% { transform: scale(1); color: inherit; }
+        }
+
+        @keyframes variable-update {
+            0% { transform: translateX(-10px); opacity: 0.5; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes config-update {
+            0% { background-color: transparent; }
+            50% { background-color: rgba(102, 126, 234, 0.1); }
+            100% { background-color: transparent; }
+        }
+
+        @keyframes hint-received {
+            0% { transform: translateY(-10px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes chat-message {
+            0% { transform: translateY(10px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes timerCompletePulse {
+            0%, 100% { transform: scale(1); color: #ff6b6b; }
+            50% { transform: scale(1.1); color: #ff6b6b; }
+        }
+
+        /* Layout preview styles */
+        .layout-preview {
+            border: 2px dashed rgba(102, 126, 234, 0.5) !important;
+            background-color: rgba(102, 126, 234, 0.05) !important;
+            transition: all 0.3s ease;
+        }
+
+        .positioned-component {
+            transition: all 0.3s ease;
+        }
+
+        /* Component interaction styles */
+        .positioned-component.clicked {
+            transform: scale(0.98);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .positioned-component.hovered {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        /* Interactive element styles */
+        .timer-display {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .timer-display:hover {
+            filter: brightness(1.2);
+        }
+
+        .hint-card {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .hint-card:hover {
+            transform: translateX(5px);
+            background-color: rgba(102, 126, 234, 0.1);
+        }
+
+        .chat-row {
+            cursor: default;
+        }
+
+        /* Connection status styles */
+        .status-badge.status-connected {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            color: #000;
+        }
+
+        .status-badge.status-disconnected {
+            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+            color: #fff;
+        }
+
+        .status-badge.status-connecting {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #000;
+        }
         /* Chat styles */
         .chat-section { display: block; }
         .chat-log { display: flex; flex-direction: column; gap: 0.25rem; }
@@ -318,15 +414,26 @@
         #hint-overlay .overlay-close { margin-top: 1rem; }
 
         /* Media lightbox styles */
-        #lightbox {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.9);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            backdrop-filter: blur(5px);
+        #fullscreen-media {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0, 0, 0, 0.9) !important;
+            display: none !important;
+            align-items: center !important;
+            justify-content: center !important;
+            z-index: 999999 !important;
+            backdrop-filter: blur(5px) !important;
+        }
+
+        #fullscreen-media.active {
+            display: flex !important;
+        }
+
+        .lightbox.active {
+            display: flex !important;
         }
 
         .lightbox-content {
@@ -387,6 +494,19 @@
             background: var(--bg-dark);
         }
 
+        /* Ensure lightbox content is properly styled */
+        #fullscreen-media .lightbox-content {
+            background: var(--bg-medium);
+            border-radius: var(--border-radius);
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: var(--shadow-glow);
+            border: 1px solid rgba(255,255,255,0.15);
+            display: flex;
+            flex-direction: column;
+        }
+
         .lightbox-media img,
         .lightbox-media video {
             max-width: 100%;
@@ -397,6 +517,126 @@
 
         .lightbox-media video {
             background: #000;
+        }
+
+        /* Layout Component Styles */
+        .layout-custom {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: repeat(8, 80px);
+            gap: 10px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .layout-component {
+            background: rgba(102, 126, 234, 0.2);
+            border: 2px solid rgba(102, 126, 234, 0.5);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .layout-component:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .timer-component {
+            background: rgba(255, 107, 107, 0.2);
+            border-color: rgba(255, 107, 107, 0.5);
+        }
+
+        .timer-component:hover {
+            background: rgba(255, 107, 107, 0.3);
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .hints-component {
+            background: rgba(245, 87, 108, 0.2);
+            border-color: rgba(245, 87, 108, 0.5);
+        }
+
+        .hints-component:hover {
+            background: rgba(245, 87, 108, 0.3);
+            box-shadow: 0 0 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .gamestate-component {
+            background: rgba(74, 222, 128, 0.2);
+            border-color: rgba(74, 222, 128, 0.5);
+        }
+
+        .gamestate-component:hover {
+            background: rgba(74, 222, 128, 0.3);
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+        }
+
+        .chat-component {
+            background: rgba(168, 85, 247, 0.2);
+            border-color: rgba(168, 85, 247, 0.5);
+        }
+
+        .chat-component:hover {
+            background: rgba(168, 85, 247, 0.3);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+        }
+
+        .media-component {
+            background: rgba(251, 191, 36, 0.2);
+            border-color: rgba(251, 191, 36, 0.5);
+        }
+
+        .media-component:hover {
+            background: rgba(251, 191, 36, 0.3);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+        }
+
+        .navigation-component {
+            background: rgba(14, 165, 233, 0.2);
+            border-color: rgba(14, 165, 233, 0.5);
+        }
+
+        .navigation-component:hover {
+            background: rgba(14, 165, 233, 0.3);
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
+        }
+
+        .unknown-component {
+            background: rgba(156, 163, 175, 0.2);
+            border-color: rgba(156, 163, 175, 0.5);
+        }
+
+        .unknown-component:hover {
+            background: rgba(156, 163, 175, 0.3);
+            box-shadow: 0 0 20px rgba(156, 163, 175, 0.4);
+        }
+
+        /* Responsive layout adjustments */
+        @media (max-width: 768px) {
+            .layout-custom {
+                grid-template-columns: repeat(6, 1fr);
+                grid-template-rows: repeat(12, 60px);
+                gap: 8px;
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .layout-custom {
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: repeat(16, 50px);
+                gap: 6px;
+                padding: 0.5rem;
+            }
         }
     </style>
 </head>
@@ -452,18 +692,6 @@
                 </div>
             </section>
         </main>
-
-        <nav class="nav-section">
-            <button class="nav-button secondary" onclick="window.location.href='/'">
-                ← Back to Admin
-            </button>
-            <button class="nav-button" onclick="requestUpdate()">
-                Refresh Status
-            </button>
-            <button class="nav-button" id="start-rules-button">
-                Start Rules Slideshow
-            </button>
-        </nav>
     </div>
 
     <div id="room-info" style="position: fixed; top: 1rem; right: 1rem; display: none; font-size: 0.8em;"></div>
@@ -478,18 +706,24 @@
     </div>
 
     <!-- Media lightbox overlay -->
-    <div id="lightbox">
-        <div class="lightbox-content">
-            <div class="lightbox-header">
-                <h2 id="lightbox-headline"></h2>
-                <button class="lightbox-close" id="lightbox-close">×</button>
+    <div id="fullscreen-media">
+        <div class="lightbox">
+            <div class="lightbox-content">
+                <div class="lightbox-header">
+                    <h2 class="lightbox-headline"></h2>
+                    <button class="lightbox-close">×</button>
+                </div>
+                <div class="lightbox-media"></div>
             </div>
-            <div class="lightbox-media" id="lightbox-content"></div>
         </div>
     </div>
 
     <!-- Scripts -->
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/notification-manager.js"></script>
+    <script src="/theme-component-interface.js"></script>
     <script src="/player.js"></script>
+    <script src="/component-integration.js"></script>
+    <script src="/component-integration-test.js"></script>
 </body>
 </html>

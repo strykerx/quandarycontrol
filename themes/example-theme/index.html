@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- 
+        ART DECO GOLD THEME - INDEX.HTML
+        ================================
+        This file serves as the main template for the Art Deco Gold theme.
+        It includes all necessary components and follows the Quandary Control
+        theme structure for seamless integration.
+        
+        Theme Features:
+        - 1920s Art Deco aesthetic
+        - Gold and black color scheme
+        - Geometric patterns
+        - Period-appropriate typography
+        - Responsive design
+        - Accessibility features
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Theme Title - Appears in browser tab -->
+    <title>[room-info field="name"]</title>
+    
+    <!-- 
+        CSS LOADING ORDER
+        =================
+        1. Base styles.css - Core application styles
+        2. Theme style.css - Art Deco theme overrides
+        This ensures theme styles properly override base styles
+    -->
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/themes/example-theme/style.css">
+    
+    <!-- 
+        GOOGLE FONTS
+        ============
+        Loading the required fonts for the Art Deco theme:
+        - Great Vibes: Elegant cursive for headings and decorative elements
+        - Cinzel Decorative: Stylized serif for body text
+        These fonts are essential for the authentic Art Deco aesthetic
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="theme-artdeco">
+    <!-- 
+        MAIN CONTAINER
+        ===============
+        This wrapper contains all theme components and provides
+        the foundation for the Art Deco layout structure
+    -->
+    <div class="artdeco-container">
+        
+        <!-- 
+            HEADER SECTION
+            ===============
+            Contains the room title and decorative elements
+            Uses the theme's gold accent color and decorative fonts
+        -->
+        <header class="artdeco-header">
+            <!-- Room Title - Styled with Great Vibes font -->
+            <h1 class="room-title">[room-info]</h1>
+            
+            <!-- Decorative Divider - Art Deco geometric pattern -->
+            <div class="artdeco-divider">
+                <span class="divider-symbol">◆</span>
+                <span class="divider-line"></span>
+                <span class="divider-symbol">◆</span>
+            </div>
+        </header>
+        
+        <!-- 
+            MAIN CONTENT AREA
+            ==================
+            Contains all the interactive components of the escape room
+            Uses CSS Grid for responsive layout
+        -->
+        <main class="artdeco-main">
+            
+            <!-- 
+                TIMER SECTION
+                =============
+                Displays the countdown timer with Art Deco styling
+                Features large gold numbers and metallic effects
+            -->
+            <section class="timer-section">
+                <div class="timer-container">
+                    <!-- Timer Display - Main countdown with decorative styling -->
+                    <div class="timer-display">
+                        [timer format="mm:ss" showControls="true"]
+                    </div>
+                    
+                    <!-- Timer Label - Descriptive text with period styling -->
+                    <div class="timer-label">Time Remaining</div>
+                </div>
+            </section>
+            
+            <!-- 
+                CHAT SECTION
+                ============
+                Player-to-Game Master communication interface
+                Styled with gold borders and period-appropriate decoration
+            -->
+            <section class="chat-section">
+                <div class="chat-container">
+                    <!-- Chat Header - Title with decorative phone symbol -->
+                    <div class="chat-header">
+                        <h2>Communication</h2>
+                        <span class="chat-symbol">✆</span>
+                    </div>
+                    
+                    <!-- Chat Messages - Scrollable message area -->
+                    <div class="chat-messages">
+                        [chat maxMessages="50" showTimestamps="true"]
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 
+                HINTS SECTION
+                =============
+                Displays game hints with Art Deco card styling
+                Features decorative diamond symbols and gold accents
+            -->
+            <section class="hints-section">
+                <div class="hints-container">
+                    <!-- Hints Header - Title with decorative elements -->
+                    <div class="hints-header">
+                        <h2>Clues & Hints</h2>
+                        <span class="hints-symbol">◆</span>
+                    </div>
+                    
+                    <!-- Hints Content - Scrollable hint cards -->
+                    <div class="hints-content">
+                        [hints maxHints="20" showNavigation="true"]
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 
+                VARIABLES SECTION
+                ==================
+                Displays game variables and state information
+                Uses clean Art Deco styling with gold accents
+            -->
+            <section class="variables-section">
+                <div class="variables-container">
+                    <!-- Variables Header - Title with geometric decoration -->
+                    <div class="variables-header">
+                        <h2>Game State</h2>
+                        <div class="variables-decoration">
+                            <span class="deco-line"></span>
+                            <span class="deco-symbol">◆</span>
+                            <span class="deco-line"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Variables Content - Dynamic variable display -->
+                    <div class="variables-content">
+                        [variables updateInterval="1000"]
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 
+                MEDIA SECTION
+                ==============
+                Handles image and video display with Art Deco lightbox
+                Features gold frame styling and period-appropriate controls
+            -->
+            <section class="media-section">
+                <div class="media-container">
+                    <!-- Media Header - Title with decorative elements -->
+                    <div class="media-header">
+                        <h2>Media Gallery</h2>
+                        <span class="media-symbol">◈</span>
+                    </div>
+                    
+                    <!-- Media Content - Image/video display area -->
+                    <div class="media-content">
+                        [media supportedFormats="jpg,png,gif,mp4,mp3" position="lightbox"]
+                    </div>
+                </div>
+            </section>
+            
+        </main>
+        
+        <!-- 
+            FOOTER SECTION
+            ==============
+            Contains additional information and decorative elements
+            Maintains the Art Deco aesthetic throughout
+        -->
+        <footer class="artdeco-footer">
+            <!-- Footer Decoration - Geometric pattern -->
+            <div class="footer-decoration">
+                <span class="footer-symbol">◆</span>
+                <span class="footer-symbol">◆</span>
+                <span class="footer-symbol">◆</span>
+            </div>
+            
+            <!-- Footer Text - Copyright and information -->
+            <div class="footer-text">
+                <p>Powered by Quandary Control</p>
+                <p>Art Deco Gold Theme v1.0.0</p>
+            </div>
+        </footer>
+        
+    </div>
+    
+    <!-- 
+        HIDDEN ELEMENTS
+        ================
+        These elements are required by the Quandary Control system
+        but are not visible in the Art Deco theme interface
+    -->
+    <div style="display: none;">
+        <!-- Start Rules Button - Required by player.js -->
+        <button id="start-rules-button"></button>
+        
+        <!-- Additional hidden elements for system functionality -->
+        <div id="system-elements"></div>
+    </div>
+    
+    <!-- 
+        JAVASCRIPT LOADING
+        ===================
+        Essential scripts for Quandary Control functionality
+        Loaded at the end of the document for performance
+    -->
+    
+    <!-- Socket.IO - Real-time communication -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- Player.js - Core game functionality -->
+    <script src="/player.js"></script>
+    
+    <!-- Theme-specific JavaScript (Optional) -->
+    <!-- <script src="/themes/example-theme/script.js"></script> -->
+    
+    <!-- 
+        THEME INITIALIZATION
+        =====================
+        This script ensures the Art Deco theme is properly initialized
+        and handles any theme-specific setup requirements
+    -->
+    <script>
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Apply Art Deco theme class to body
+            document.body.classList.add('theme-artdeco');
+            
+            // Initialize theme-specific features
+            initializeArtDecoTheme();
+            
+            // Log theme initialization
+            console.log('Art Deco Gold Theme initialized successfully');
+        });
+        
+        /**
+         * Initialize Art Deco Theme Features
+         * Sets up theme-specific functionality and enhancements
+         */
+        function initializeArtDecoTheme() {
+            // Add geometric pattern animation if supported
+            if (window.CSS && CSS.supports('animation', 'pattern')) {
+                document.body.classList.add('pattern-animated');
+            }
+            
+            // Enhance focus styles for better keyboard navigation
+            enhanceFocusStyles();
+            
+            // Setup responsive behavior
+            setupResponsiveBehavior();
+        }
+        
+        /**
+         * Enhance Focus Styles
+         * Improves keyboard navigation visibility
+         */
+        function enhanceFocusStyles() {
+            // Add focus event listeners to interactive elements
+            const interactiveElements = document.querySelectorAll('button, input, textarea, [tabindex]');
+            
+            interactiveElements.forEach(element => {
+                element.addEventListener('focus', function() {
+                    this.classList.add('artdeco-focus');
+                });
+                
+                element.addEventListener('blur', function() {
+                    this.classList.remove('artdeco-focus');
+                });
+            });
+        }
+        
+        /**
+         * Setup Responsive Behavior
+         * Handles theme adjustments for different screen sizes
+         */
+        function setupResponsiveBehavior() {
+            // Check screen size and apply appropriate classes
+            function checkScreenSize() {
+                const width = window.innerWidth;
+                
+                if (width < 768) {
+                    document.body.classList.add('mobile-view');
+                    document.body.classList.remove('tablet-view', 'desktop-view');
+                } else if (width < 1024) {
+                    document.body.classList.add('tablet-view');
+                    document.body.classList.remove('mobile-view', 'desktop-view');
+                } else {
+                    document.body.classList.add('desktop-view');
+                    document.body.classList.remove('mobile-view', 'tablet-view');
+                }
+            }
+            
+            // Initial check
+            checkScreenSize();
+            
+            // Listen for window resize
+            window.addEventListener('resize', checkScreenSize);
+        }
+        
+        /**
+         * Theme Error Handler
+         * Provides graceful fallbacks for theme loading issues
+         */
+        window.addEventListener('error', function(e) {
+            if (e.message.includes('theme') || e.message.includes('ArtDeco')) {
+                console.warn('Art Deco Theme Error:', e.message);
+                // Apply fallback styling
+                document.body.classList.add('theme-fallback');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -22,6 +22,11 @@ socket.on('connect', () => {
     if (infoEl) infoEl.innerHTML = `Controlling Room: <strong>${roomId}</strong>`;
     fetchHintConfigAndToggle();
     initializeMediaUpload();
+    
+    // Initialize notification manager
+    if (window.gmNotificationManager) {
+      window.gmNotificationManager.initialize(roomId);
+    }
   }
 });
 
@@ -292,6 +297,95 @@ document.getElementById('subtract-time').addEventListener('click', () => {
   });
 });
 
+// Secondary Timer Controls
+document.getElementById('start-secondary-timer').addEventListener('click', () => {
+  console.log('Start secondary timer clicked, roomId:', roomId);
+  socket.emit('secondary_timer_control', {
+    roomId,
+    action: 'start'
+  });
+});
+
+document.getElementById('pause-secondary-timer').addEventListener('click', () => {
+  console.log('Pause secondary timer clicked, roomId:', roomId);
+  socket.emit('secondary_timer_control', {
+    roomId,
+    action: 'pause'
+  });
+});
+
+document.getElementById('stop-secondary-timer').addEventListener('click', () => {
+  console.log('Stop secondary timer clicked, roomId:', roomId);
+  socket.emit('secondary_timer_control', {
+    roomId,
+    action: 'stop'
+  });
+});
+
+document.getElementById('add-secondary-time').addEventListener('click', () => {
+  console.log('Add secondary time clicked, roomId:', roomId);
+  socket.emit('secondary_timer_control', {
+    roomId,
+    action: 'adjust',
+    amount: 30
+  });
+});
+
+document.getElementById('subtract-secondary-time').addEventListener('click', () => {
+  console.log('Subtract secondary time clicked, roomId:', roomId);
+  socket.emit('secondary_timer_control', {
+    roomId,
+    action: 'adjust',
+    amount: -30
+  });
+});
+
+// Dual Timer Controls
+document.getElementById('start-both-timers').addEventListener('click', () => {
+  console.log('Start both timers clicked, roomId:', roomId);
+  // Start primary timer
+  socket.emit('timer_control', {
+    roomId,
+    action: 'start'
+  });
+  // Start secondary timer
+  socket.emit('secondary_timer_control', {
+    roomId,
+    action: 'start'
+  });
+});
+
+document.getElementById('pause-both-timers').addEventListener('click', () => {
+  console.log('Pause both timers clicked, roomId:', roomId);
+  // Pause primary timer
+  socket.emit('timer_control', {
+    roomId,
+    action: 'pause'
+  });
+  // Pause secondary timer
+  socket.emit('secondary_timer_control', {
+    roomId,
+    action: 'pause'
+  });
+});
+
+document.getElementById('stop-both-timers').addEventListener('click', () => {
+  console.log('Stop both timers clicked, roomId:', roomId);
+  // Stop primary timer
+  socket.emit('timer_control', {
+    roomId,
+    action: 'stop'
+  });
+  // Stop secondary timer
+  socket.emit('secondary_timer_control', {
+    roomId,
+    action: 'stop'
+  });
+  // Also clear chat and hints when stopping both timers
+  socket.emit('clear_chat', { roomId });
+  socket.emit('clear_hints', { roomId });
+});
+
 // Clear chat button
 document.getElementById('clear-chat').addEventListener('click', () => {
   console.log('Clear chat clicked, roomId:', roomId);
@@ -426,6 +520,44 @@ function parseValue(val, type) {
 socket.on('timer_update', (data) => {
   document.getElementById('timer-display').textContent =
     `${Math.floor(data.remaining/60).toString().padStart(2,'0')}:${(data.remaining%60).toString().padStart(2,'0')}`;
+});
+
+// Secondary timer update
+socket.on('secondary_timer_update', (data) => {
+  const secondaryTimerDisplay = document.getElementById('secondary-timer-display');
+  const secondaryTimerSection = document.getElementById('secondary-timer-section');
+  const dualTimerSection = document.getElementById('dual-timer-section');
+  
+  if (data.enabled && secondaryTimerDisplay) {
+    secondaryTimerDisplay.textContent =
+      `${Math.floor(data.remaining/60).toString().padStart(2,'0')}:${(data.remaining%60).toString().padStart(2,'0')}`;
+    
+    // Show secondary timer section if enabled
+    if (secondaryTimerSection) {
+      secondaryTimerSection.style.display = 'block';
+    }
+    // Show dual timer section if secondary timer is enabled
+    if (dualTimerSection) {
+      dualTimerSection.style.display = 'block';
+    }
+  } else if (secondaryTimerSection) {
+    // Hide secondary timer section if not enabled
+    secondaryTimerSection.style.display = 'none';
+    // Hide dual timer section if secondary timer is not enabled
+    if (dualTimerSection) {
+      dualTimerSection.style.display = 'none';
+    }
+  }
+});
+
+// Secondary timer complete
+socket.on('secondary_timer_complete', () => {
+  console.log('Secondary timer completed');
+  const secondaryTimerDisplay = document.getElementById('secondary-timer-display');
+  if (secondaryTimerDisplay) {
+    secondaryTimerDisplay.textContent = '00:00';
+    secondaryTimerDisplay.style.animation = 'timerCompletePulse 1s infinite';
+  }
 });
 
 // Hint confirmation

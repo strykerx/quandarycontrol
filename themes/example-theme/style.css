@@ -1,0 +1,321 @@
+/* ART DECO GOLD THEME STYLESHEET
+=================================================================
+Theme Name: Art Deco Gold
+Description: 1920s-inspired theme with geometric patterns and metallic accents
+Color Scheme:
+- Primary: Gold (#FFD700)
+- Secondary: Black (#000000)
+- Accent: Dark Gold (#B8860B)
+- Text: Cream (#FFFDD0)
+Fonts:
+- Headings: 'Great Vibes' (cursive)
+- Body: 'Cinzel Decorative' (serif)
+Design Elements:
+- Geometric background patterns
+- Sharp angular borders
+- Metallic text effects
+- Art deco ornamentation
+================================================================= */
+
+/* BASE VARIABLES - Inherited from theme-config.json */
+:root {
+  /* Color Scheme - These variables control the main visual appearance */
+  --primary: var(--primary-color);       /* Dominant gold color used for accents and highlights */
+  --secondary: var(--secondary-color);   /* Background black color for contrast */
+  --accent: var(--accent-color);         /* Dark gold for secondary accents and borders */
+  --text: var(--text-color);             /* Cream-colored text for readability against black */
+
+  /* Typography - Font definitions for different text elements */
+  --font-heading: var(--font-heading);   /* Decorative script font for headings and titles */
+  --font-body: var(--font-body);         /* Styled serif font for body text and content */
+
+  /* Borders & Effects - Visual styling for components */
+  --border: var(--border-style);         /* Gold border definition for component outlines */
+  --radius: var(--border-radius);        /* Sharp angles (0) for authentic deco aesthetic */
+  --shadow: var(--shadow-effect);        /* Dramatic shadows for depth and emphasis */
+  
+  /* Patterns - Background geometric elements */
+  --pattern-opacity: var(--pattern-opacity); /* Controls visibility of geometric patterns (0.1 = subtle) */
+  --pattern-color: var(--pattern-color);     /* Gold color for geometric pattern elements */
+}
+
+/* BASE LAYOUT - Applies to all components and provides foundation */
+body {
+  background: var(--secondary);            /* Black background for dramatic contrast */
+  color: var(--text);                    /* Cream text for readability */
+  font-family: var(--font-body);         /* Art deco styled serif font */
+  line-height: 1.6;                      /* Comfortable reading line height */
+  position: relative;                    /* For pseudo-element positioning */
+  overflow-x: hidden;                    /* Prevent horizontal scroll */
+  margin: 0;                            /* Remove default browser margins */
+  padding: 0;                           /* Remove default browser padding */
+}
+
+/* GEOMETRIC BACKGROUND PATTERNS - Creates authentic art deco atmosphere */
+body::before {
+  content: '';                          /* Empty pseudo-element for pattern */
+  position: fixed;                      /* Fixed positioning for full-screen coverage */
+  top: 0;                              /* Start from top of viewport */
+  left: 0;                             /* Start from left of viewport */
+  width: 100%;                         /* Full viewport width */
+  height: 100%;                        /* Full viewport height */
+  background:                          /* Multiple gradients create geometric pattern */
+    linear-gradient(45deg, var(--pattern-color) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--pattern-color) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--pattern-color) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--pattern-color) 75%);
+  background-size: 100px 100px;        /* Size of each pattern repeat */
+  opacity: var(--pattern-opacity);     /* Subtle pattern visibility */
+  z-index: -1;                         /* Place behind all content */
+}
+
+/* TIMER COMPONENT - Styling the countdown display with art deco flair */
+.timer-display {
+  font-family: var(--font-heading);     /* Decorative script font for elegance */
+  color: var(--primary);                /* Gold color for prominence */
+  font-size: 4rem;                      /* Large, dramatic timer display */
+  text-shadow: var(--shadow);           /* Metallic text shadow effect */
+  padding: 1.5rem;                      /* Generous padding for visual impact */
+  border: var(--border);                /* Gold border for definition */
+  background:                          /* Gradient background for depth */
+    linear-gradient(
+      to bottom right,
+      rgba(0,0,0,0.3),                 /* Semi-transparent black overlay */
+      rgba(0,0,0,0.6)                  /* Darker overlay for contrast */
+    );
+  margin: 2rem 0;                      /* Vertical spacing */
+  position: relative;                  /* For potential decorative elements */
+  text-align: center;                  /* Center timer display */
+  letter-spacing: 0.1em;               /* Art deco letter spacing */
+}
+
+/* CHAT COMPONENT - Message interface styling with period-appropriate design */
+.chat-section {
+  border: var(--border);                /* Gold border definition */
+  background: rgba(0,0,0,0.8);         /* Semi-transparent black background */
+  padding: 1.5rem;                      /* Comfortable padding */
+  margin: 2rem 0;                      /* Vertical spacing */
+  position: relative;                  /* For decorative elements */
+  border-radius: var(--radius);        /* Sharp corners for deco aesthetic */
+}
+
+/* CHAT DECORATIVE ELEMENT - Art deco phone symbol */
+.chat-section::before {
+  content: '✆';                        /* Vintage phone symbol */
+  position: absolute;                  /* Positioned relative to chat section */
+  top: -20px;                         /* Slightly above chat box */
+  right: -20px;                       /* Slightly to the right */
+  font-size: 2rem;                     /* Prominent decorative size */
+  color: var(--primary);               /* Gold color for consistency */
+  transform: rotate(15deg);           /* Art deco angular styling */
+}
+
+/* CHAT MESSAGES - Individual message styling */
+.chat-message {
+  border-left: 3px solid var(--accent); /* Dark gold accent border */
+  padding: 0.5rem 1rem;                /* Internal spacing */
+  margin: 0.5rem 0;                    /* Message separation */
+  background: rgba(255,215,0,0.05);    /* Very subtle gold tint */
+  border-radius: 0 4px 4px 0;         /* Asymmetric corners for interest */
+}
+
+/* HINTS COMPONENT - Styled hint display with art deco elements */
+.hints-section {
+  border: var(--border);                /* Gold border for consistency */
+  background: rgba(0,0,0,0.7);         /* Dark background */
+  padding: 1.5rem;                      /* Internal spacing */
+  margin: 2rem 0;                      /* Vertical spacing */
+  position: relative;                  /* For decorative elements */
+}
+
+/* HINT CARDS - Individual hint styling */
+.hint-card {
+  background: rgba(255,215,0,0.1);     /* Subtle gold background */
+  border: 1px solid var(--accent);     /* Dark gold border */
+  padding: 1rem;                       /* Internal spacing */
+  margin: 1rem 0;                      /* Card separation */
+  border-radius: var(--radius);        /* Sharp corners */
+  position: relative;                  /* For decorative elements */
+}
+
+/* HINT CARD DECORATION - Art deco corner elements */
+.hint-card::after {
+  content: '◆';                       /* Diamond symbol for corners */
+  position: absolute;                  /* Positioned relative to card */
+  bottom: 10px;                       /* Near bottom edge */
+  right: 10px;                        /* Near right edge */
+  color: var(--accent);               /* Dark gold color */
+  opacity: 0.3;                       /* Subtle decoration */
+}
+
+/* VARIABLES COMPONENT - Game variables display with period styling */
+.variables-section {
+  border: var(--border);                /* Gold border for consistency */
+  background: rgba(0,0,0,0.6);         /* Dark background */
+  padding: 1.5rem;                      /* Internal spacing */
+  margin: 2rem 0;                      /* Vertical spacing */
+}
+
+/* VARIABLE ITEMS - Individual variable display */
+.variable-item {
+  display: flex;                        /* Flex layout for alignment */
+  justify-content: space-between;      /* Name and value on opposite sides */
+  padding: 0.5rem 1rem;                /* Internal spacing */
+  border-bottom: 1px solid var(--accent); /* Separator lines */
+  font-family: var(--font-body);       /* Consistent typography */
+}
+
+/* VARIABLE VALUES - Emphasized variable values */
+.variable-value {
+  color: var(--primary);               /* Gold color for emphasis */
+  font-weight: bold;                   /* Bold for importance */
+}
+
+/* MEDIA COMPONENT - Image/video lightbox with art deco frame */
+.media-section {
+  border: var(--border);                /* Gold border for consistency */
+  background: rgba(0,0,0,0.8);         /* Dark background */
+  padding: 1.5rem;                      /* Internal spacing */
+  margin: 2rem 0;                      /* Vertical spacing */
+}
+
+/* LIGHTBOX - Modal display for media */
+.lightbox {
+  background: rgba(0,0,0,0.95);         /* Very dark overlay */
+  border: 3px solid var(--primary);    /* Prominent gold frame */
+  border-radius: var(--radius);        /* Sharp corners */
+  padding: 2rem;                       /* Generous frame */
+}
+
+/* LIGHTBOX CONTENT - Media display area */
+.lightbox-content {
+  position: relative;                  /* For close button positioning */
+  max-width: 90vw;                    /* Responsive width */
+  max-height: 90vh;                    /* Responsive height */
+}
+
+/* LIGHTBOX CLOSE BUTTON - Styled close control */
+.lightbox-close {
+  position: absolute;                  /* Positioned relative to content */
+  top: -40px;                         /* Above lightbox */
+  right: -40px;                       /* To the right of lightbox */
+  background: var(--primary);          /* Gold background */
+  color: var(--secondary);             /* Black text */
+  border: none;                       /* No border */
+  width: 30px;                        /* Square button */
+  height: 30px;                       /* Square button */
+  border-radius: 50%;                 /* Circular button */
+  font-size: 1.2rem;                  /* Prominent X */
+  cursor: pointer;                    /* Hand cursor */
+  transition: transform 0.3s ease;   /* Smooth hover effect */
+}
+
+/* LIGHTBOX CLOSE HOVER - Interactive state */
+.lightbox-close:hover {
+  transform: scale(1.1);              /* Slightly larger on hover */
+}
+
+/* RESPONSIVE DESIGN - Mobile adaptations for smaller screens */
+@media (max-width: 768px) {
+  /* Timer adjustments for mobile */
+  .timer-display {
+    font-size: 2.5rem;                 /* Smaller but still readable */
+    padding: 1rem;                     /* Reduced padding */
+  }
+  
+  /* Chat section mobile adjustments */
+  .chat-section {
+    padding: 1rem;                     /* Reduced padding */
+    margin: 1rem 0;                    /* Reduced margins */
+  }
+  
+  /* Hints section mobile adjustments */
+  .hints-section {
+    padding: 1rem;                     /* Reduced padding */
+    margin: 1rem 0;                    /* Reduced margins */
+  }
+  
+  /* Variables section mobile adjustments */
+  .variables-section {
+    padding: 1rem;                     /* Reduced padding */
+    margin: 1rem 0;                    /* Reduced margins */
+  }
+  
+  /* Media section mobile adjustments */
+  .media-section {
+    padding: 1rem;                     /* Reduced padding */
+    margin: 1rem 0;                    /* Reduced margins */
+  }
+  
+  /* Lightbox mobile adjustments */
+  .lightbox {
+    padding: 1rem;                     /* Reduced frame */
+    border-width: 2px;                /* Thinner frame */
+  }
+  
+  /* Lightbox close button mobile adjustments */
+  .lightbox-close {
+    top: -30px;                       /* Closer to lightbox */
+    right: -30px;                     /* Closer to lightbox */
+    width: 25px;                      /* Smaller button */
+    height: 25px;                     /* Smaller button */
+  }
+}
+
+/* ACCESSIBILITY - Ensure theme meets accessibility standards */
+@media screen and (prefers-contrast: more) {
+  /* High contrast mode adjustments */
+  :root {
+    --text-color: #FFFFFF;            /* Pure white for better contrast */
+    --pattern-opacity: 0.05;          /* Even more subtle patterns */
+    --primary-color: #FFFF00;         /* Brighter gold for high contrast */
+  }
+  
+  /* Enhanced borders in high contrast mode */
+  .timer-display,
+  .chat-section,
+  .hints-section,
+  .variables-section,
+  .media-section {
+    border-width: 3px;                /* Thicker borders */
+  }
+}
+
+/* REDUCED MOTION - For users who prefer less animation */
+@media (prefers-reduced-motion: reduce) {
+  /* Remove transitions for reduced motion */
+  * {
+    transition: none !important;       /* Disable all transitions */
+    animation: none !important;       /* Disable all animations */
+  }
+}
+
+/* FOCUS STYLES - Keyboard navigation improvements */
+*:focus {
+  outline: 2px solid var(--primary);   /* Gold focus indicators */
+  outline-offset: 2px;                /* Space around outline */
+}
+
+/* PRINT STYLES - Optimized for printing */
+@media print {
+  /* Remove background patterns for printing */
+  body::before {
+    display: none;                     /* Hide decorative patterns */
+  }
+  
+  /* Ensure text is readable in print */
+  body {
+    background: white;                /* White background */
+    color: black;                     /* Black text */
+  }
+  
+  /* Adjust borders for print */
+  .timer-display,
+  .chat-section,
+  .hints-section,
+  .variables-section,
+  .media-section {
+    border: 1px solid black;          /* Simple black borders */
+    background: white;                /* White backgrounds */
+  }
+}

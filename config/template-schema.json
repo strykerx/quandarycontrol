@@ -1,0 +1,316 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Quandary Layout Template Schema",
+  "description": "Schema for validating layout templates in the Quandary Control system",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "version",
+    "layout",
+    "metadata"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the template",
+      "pattern": "^[a-zA-Z0-9_-]+$",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name of the template",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the template",
+      "maxLength": 500
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the template (semantic versioning)",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+    },
+    "author": {
+      "type": "string",
+      "description": "Author of the template",
+      "maxLength": 100
+    },
+    "tags": {
+      "type": "array",
+      "description": "Tags for categorizing the template",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 30
+      },
+      "maxItems": 10
+    },
+    "thumbnail": {
+      "type": "string",
+      "description": "URL to thumbnail image for the template",
+      "format": "uri"
+    },
+    "layout": {
+      "type": "object",
+      "description": "Layout configuration",
+      "required": [
+        "columns",
+        "rows",
+        "gap",
+        "components"
+      ],
+      "properties": {
+        "columns": {
+          "type": "integer",
+          "description": "Number of columns in the grid",
+          "minimum": 1,
+          "maximum": 24
+        },
+        "rows": {
+          "type": "integer",
+          "description": "Number of rows in the grid",
+          "minimum": 1,
+          "maximum": 24
+        },
+        "gap": {
+          "type": "integer",
+          "description": "Gap between grid cells in pixels",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "components": {
+          "type": "array",
+          "description": "Array of components in the layout",
+          "items": {
+            "$ref": "#/definitions/component"
+          },
+          "minItems": 1,
+          "maxItems": 50
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata for the template",
+      "properties": {
+        "created": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "modified": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modification timestamp"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the template",
+          "enum": ["game", "presentation", "education", "business", "custom"]
+        },
+        "complexity": {
+          "type": "string",
+          "description": "Complexity level of the template",
+          "enum": ["simple", "medium", "complex"]
+        },
+        "responsive": {
+          "type": "boolean",
+          "description": "Whether the template is responsive",
+          "default": true
+        },
+        "accessibility": {
+          "type": "object",
+          "description": "Accessibility features",
+          "properties": {
+            "keyboardNavigation": {
+              "type": "boolean",
+              "default": true
+            },
+            "screenReader": {
+              "type": "boolean",
+              "default": true
+            },
+            "highContrast": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    "customization": {
+      "type": "object",
+      "description": "Default customization settings for the template",
+      "properties": {
+        "theme": {
+          "type": "object",
+          "description": "Theme configuration",
+          "properties": {
+            "colors": {
+              "type": "object",
+              "description": "Color scheme",
+              "additionalProperties": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$|^#[0-9a-fA-F]{3}$"
+              }
+            },
+            "fonts": {
+              "type": "object",
+              "description": "Font configuration",
+              "properties": {
+                "primary": {
+                  "type": "string",
+                  "description": "Primary font family"
+                },
+                "secondary": {
+                  "type": "string",
+                  "description": "Secondary font family"
+                },
+                "size": {
+                  "type": "string",
+                  "description": "Base font size"
+                }
+              }
+            },
+            "spacing": {
+              "type": "object",
+              "description": "Spacing configuration",
+              "additionalProperties": {
+                "type": "string",
+                "pattern": "^[0-9]+(px|rem|em|%)$"
+              }
+            }
+          }
+        },
+        "background": {
+          "type": "object",
+          "description": "Background configuration",
+          "properties": {
+            "image": {
+              "type": "string",
+              "description": "Background image URL"
+            },
+            "size": {
+              "type": "string",
+              "enum": ["cover", "contain", "auto"],
+              "default": "cover"
+            },
+            "position": {
+              "type": "string",
+              "enum": ["center", "top", "bottom", "left", "right"],
+              "default": "center"
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$|^#[0-9a-fA-F]{3}$"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "component": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "col",
+        "row",
+        "width"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the component",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of component",
+          "enum": ["timer", "gameState", "hints", "navigation", "chat", "media"]
+        },
+        "col": {
+          "type": "integer",
+          "description": "Column position (1-based)",
+          "minimum": 1
+        },
+        "row": {
+          "type": "integer",
+          "description": "Row position (1-based)",
+          "minimum": 1
+        },
+        "width": {
+          "type": "integer",
+          "description": "Width in grid columns",
+          "minimum": 1,
+          "maximum": 24
+        },
+        "height": {
+          "type": "integer",
+          "description": "Height in grid rows",
+          "minimum": 1,
+          "maximum": 24,
+          "default": 1
+        },
+        "config": {
+          "type": "object",
+          "description": "Component-specific configuration",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Component title",
+              "maxLength": 100
+            },
+            "visible": {
+              "type": "boolean",
+              "description": "Whether the component is visible",
+              "default": true
+            },
+            "locked": {
+              "type": "boolean",
+              "description": "Whether the component is locked",
+              "default": false
+            },
+            "customData": {
+              "type": "object",
+              "description": "Custom component data"
+            }
+          }
+        },
+        "styling": {
+          "type": "object",
+          "description": "Component-specific styling",
+          "properties": {
+            "backgroundColor": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$|^#[0-9a-fA-F]{3}$"
+            },
+            "textColor": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$|^#[0-9a-fA-F]{3}$"
+            },
+            "borderRadius": {
+              "type": "string",
+              "pattern": "^[0-9]+(px|rem|em|%)$"
+            },
+            "padding": {
+              "type": "string",
+              "pattern": "^[0-9]+(px|rem|em|%)$"
+            },
+            "margin": {
+              "type": "string",
+              "pattern": "^[0-9]+(px|rem|em|%)$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

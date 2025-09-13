@@ -17,7 +17,7 @@
 
         <main>
             <section class="timer-section gm-control-section">
-                <h2 class="section-heading">⏳ Timer Controls</h2>
+                <h2 class="section-heading">⏳ Primary Timer Controls</h2>
                 <div class="timer-controls">
                     <button class="nav-button" id="start-timer">Start</button>
                     <button class="nav-button" id="pause-timer">Pause</button>
@@ -25,6 +25,27 @@
                     <button class="nav-button secondary" id="add-time">+30s</button>
                     <button class="nav-button secondary" id="subtract-time">-30s</button>
                     <div class="timer-display" id="timer-display">00:00</div>
+                </div>
+            </section>
+
+            <section class="secondary-timer-section gm-control-section" id="secondary-timer-section" style="display: none;">
+                <h2 class="section-heading">⏲️ Secondary Timer Controls</h2>
+                <div class="timer-controls">
+                    <button class="nav-button" id="start-secondary-timer">Start</button>
+                    <button class="nav-button" id="pause-secondary-timer">Pause</button>
+                    <button class="nav-button" id="stop-secondary-timer">Stop</button>
+                    <button class="nav-button secondary" id="add-secondary-time">+30s</button>
+                    <button class="nav-button secondary" id="subtract-secondary-time">-30s</button>
+                    <div class="timer-display" id="secondary-timer-display">00:00</div>
+                </div>
+            </section>
+
+            <section class="dual-timer-section gm-control-section" id="dual-timer-section" style="display: none;">
+                <h2 class="section-heading">⏰ Dual Timer Controls</h2>
+                <div class="timer-controls">
+                    <button class="nav-button primary" id="start-both-timers">🚀 Start Both Timers</button>
+                    <button class="nav-button secondary" id="pause-both-timers">⏸️ Pause Both</button>
+                    <button class="nav-button secondary" id="stop-both-timers">⏹️ Stop Both</button>
                 </div>
             </section>
 
@@ -104,6 +125,44 @@
                     <div class="state-content"></div>
                 </div>
             </section>
+
+            <!-- Notification Audio Management -->
+            <section class="notification-manager gm-control-section">
+                <h2 class="section-heading">🔊 Notification Audio Settings</h2>
+                
+                <!-- Audio Upload Section -->
+                <div class="audio-upload-section state-card">
+                    <h3>Upload Audio Files</h3>
+                    <div class="upload-container">
+                        <input type="file" id="audio-upload" accept="audio/*" multiple style="display:none;">
+                        <button class="nav-button" id="trigger-audio-upload">Choose Audio Files</button>
+                        <button class="nav-button secondary" id="confirm-audio-upload">Upload Selected</button>
+                    </div>
+                    <div id="audio-file-list" class="file-list"></div>
+                    <div id="audio-upload-status" class="state-card" style="margin-top:.5rem;"></div>
+                </div>
+
+                <!-- Notification Settings -->
+                <div class="notification-settings-section state-card" style="margin-top:1rem;">
+                    <h3>Notification Settings</h3>
+                    <div id="notification-settings" class="notification-settings-grid">
+                        <!-- Settings will be populated by JavaScript -->
+                    </div>
+                    <div class="notification-actions" style="margin-top:1rem; display:flex; gap:.75rem; flex-wrap:wrap;">
+                        <button class="nav-button" id="save-notification-settings">Save Settings</button>
+                        <button class="nav-button secondary" id="test-all-notifications">Test All</button>
+                        <button class="nav-button secondary" id="reload-notification-settings">Reload</button>
+                    </div>
+                </div>
+
+                <!-- Available Audio Files -->
+                <div class="audio-library-section state-card" style="margin-top:1rem;">
+                    <h3>Audio Library</h3>
+                    <div id="audio-library" class="audio-library-grid">
+                        <!-- Audio files will be populated by JavaScript -->
+                    </div>
+                </div>
+            </section>
         </main>
 
         <nav class="nav-section">
@@ -114,6 +173,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/gm-notifications.js"></script>
     <script src="/gm.js"></script>
 </body>
 </html>
