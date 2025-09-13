@@ -6,3 +6,22 @@ public/uploads/
 logs/
 .vscode/
 .idea/
+
+# Special Windows device files
+nul
+
+# Development artifacts
+.claude/
+.roo/
+.rooroo/
+playwright-report/
+test-results/
+node_modules/
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment configurations
+.env
+.env.local
