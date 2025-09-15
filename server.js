@@ -36,6 +36,11 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/admin.html');
 });
 
+// Android TV Portal route
+app.get('/tv', (req, res) => {
+  res.sendFile(__dirname + '/public/androidtv.html');
+});
+
 /* Dynamic room routes */
 app.get('/room/:roomId/player', (req, res) => {
   try {

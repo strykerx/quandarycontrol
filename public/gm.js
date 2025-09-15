@@ -598,3 +598,273 @@ document.getElementById('edit-rules-button').addEventListener('click', () => {
     alert('No room ID found. Please make sure you are in a valid room.');
   }
 });
+
+// GM Page Customization Functionality
+class GMCustomization {
+  constructor() {
+    this.roomId = roomId;
+    this.storageKey = `gm_customization_${this.roomId}`;
+    this.defaultColors = {
+      bgColor: '#1a1a1a',
+      primaryColor: '#007bff',
+      textColor: '#ffffff'
+    };
+    this.init();
+  }
+
+  init() {
+    this.bindEvents();
+    this.loadCustomization();
+    this.updateRoomTitle();
+  }
+
+  bindEvents() {
+    // File input
+    document.getElementById('choose-bg-image')?.addEventListener('click', () => {
+      document.getElementById('gm-bg-image').click();
+    });
+
+    document.getElementById('gm-bg-image')?.addEventListener('change', (e) => {
+      this.handleImageUpload(e);
+    });
+
+    // Color inputs
+    document.getElementById('gm-bg-color')?.addEventListener('change', (e) => {
+      this.updateBackgroundColor(e.target.value);
+    });
+
+    document.getElementById('gm-primary-color')?.addEventListener('change', (e) => {
+      this.updatePrimaryColor(e.target.value);
+    });
+
+    document.getElementById('gm-text-color')?.addEventListener('change', (e) => {
+      this.updateTextColor(e.target.value);
+    });
+
+    // Reset buttons
+    document.getElementById('reset-bg-color')?.addEventListener('click', () => {
+      this.resetBackgroundColor();
+    });
+
+    document.getElementById('reset-primary-color')?.addEventListener('click', () => {
+      this.resetPrimaryColor();
+    });
+
+    document.getElementById('reset-text-color')?.addEventListener('click', () => {
+      this.resetTextColor();
+    });
+
+    document.getElementById('remove-bg-image')?.addEventListener('click', () => {
+      this.removeBackgroundImage();
+    });
+
+    // Action buttons
+    document.getElementById('save-gm-customization')?.addEventListener('click', () => {
+      this.saveCustomization();
+    });
+
+    document.getElementById('reset-all-customization')?.addEventListener('click', () => {
+      this.resetAllCustomization();
+    });
+  }
+
+  async updateRoomTitle() {
+    try {
+      if (!this.roomId) return;
+      
+      const response = await fetch(`/api/rooms/${this.roomId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data && data.data.name) {
+          const titleElement = document.getElementById('gm-page-title');
+          if (titleElement) {
+            titleElement.textContent = `${data.data.name} Control`;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching room data:', error);
+    }
+  }
+
+  handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.updateBackgroundImage(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  updateBackgroundColor(color) {
+    document.body.style.backgroundColor = color;
+    document.querySelector('.container').style.backgroundColor = color;
+  }
+
+  updateBackgroundImage(imageData) {
+    document.body.style.backgroundImage = `url(${imageData})`;
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundPosition = 'center';
+    document.body.style.backgroundAttachment = 'fixed';
+  }
+
+  removeBackgroundImage() {
+    document.body.style.backgroundImage = 'none';
+    document.getElementById('gm-bg-image').value = '';
+  }
+
+  updatePrimaryColor(color) {
+    const style = document.createElement('style');
+    style.id = 'gm-primary-color-override';
+    const existingStyle = document.getElementById('gm-primary-color-override');
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+    
+    style.textContent = `
+      .nav-button:not(.secondary) {
+        background-color: ${color} !important;
+        border-color: ${color} !important;
+      }
+      .nav-button:not(.secondary):hover {
+        background-color: ${this.darkenColor(color, 10)} !important;
+        border-color: ${this.darkenColor(color, 10)} !important;
+      }
+      .status-badge {
+        background-color: ${color} !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  updateTextColor(color) {
+    const style = document.createElement('style');
+    style.id = 'gm-text-color-override';
+    const existingStyle = document.getElementById('gm-text-color-override');
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+    
+    style.textContent = `
+      .room-title, .section-heading, .container, 
+      .gm-control-section, .state-card, .state-content {
+        color: ${color} !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  darkenColor(color, percent) {
+    const num = parseInt(color.replace("#", ""), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) - amt;
+    const G = (num >> 8 & 0x00FF) - amt;
+    const B = (num & 0x0000FF) - amt;
+    return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+      (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+      (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+  }
+
+  resetBackgroundColor() {
+    document.getElementById('gm-bg-color').value = this.defaultColors.bgColor;
+    this.updateBackgroundColor(this.defaultColors.bgColor);
+  }
+
+  resetPrimaryColor() {
+    document.getElementById('gm-primary-color').value = this.defaultColors.primaryColor;
+    this.updatePrimaryColor(this.defaultColors.primaryColor);
+  }
+
+  resetTextColor() {
+    document.getElementById('gm-text-color').value = this.defaultColors.textColor;
+    this.updateTextColor(this.defaultColors.textColor);
+  }
+
+  resetAllCustomization() {
+    if (confirm('Are you sure you want to reset all customizations? This cannot be undone.')) {
+      this.removeBackgroundImage();
+      this.resetBackgroundColor();
+      this.resetPrimaryColor();
+      this.resetTextColor();
+      localStorage.removeItem(this.storageKey);
+      this.showToast('All customizations reset', 'success');
+    }
+  }
+
+  saveCustomization() {
+    const customization = {
+      bgColor: document.getElementById('gm-bg-color').value,
+      primaryColor: document.getElementById('gm-primary-color').value,
+      textColor: document.getElementById('gm-text-color').value,
+      bgImage: document.body.style.backgroundImage !== 'none' ? document.body.style.backgroundImage : null
+    };
+
+    localStorage.setItem(this.storageKey, JSON.stringify(customization));
+    this.showToast('Customization saved successfully!', 'success');
+  }
+
+  loadCustomization() {
+    try {
+      const saved = localStorage.getItem(this.storageKey);
+      if (!saved) return;
+
+      const customization = JSON.parse(saved);
+      
+      if (customization.bgColor) {
+        document.getElementById('gm-bg-color').value = customization.bgColor;
+        this.updateBackgroundColor(customization.bgColor);
+      }
+      
+      if (customization.primaryColor) {
+        document.getElementById('gm-primary-color').value = customization.primaryColor;
+        this.updatePrimaryColor(customization.primaryColor);
+      }
+      
+      if (customization.textColor) {
+        document.getElementById('gm-text-color').value = customization.textColor;
+        this.updateTextColor(customization.textColor);
+      }
+      
+      if (customization.bgImage) {
+        document.body.style.backgroundImage = customization.bgImage;
+        document.body.style.backgroundSize = 'cover';
+        document.body.style.backgroundPosition = 'center';
+        document.body.style.backgroundAttachment = 'fixed';
+      }
+    } catch (error) {
+      console.error('Error loading customization:', error);
+    }
+  }
+
+  showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${type === 'success' ? '#28a745' : '#dc3545'};
+      color: white;
+      padding: 12px 24px;
+      border-radius: 4px;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.remove();
+    }, 3000);
+  }
+}
+
+// Initialize GM customization when page loads
+document.addEventListener('DOMContentLoaded', () => {
+  if (roomId) {
+    window.gmCustomization = new GMCustomization();
+  }
+});

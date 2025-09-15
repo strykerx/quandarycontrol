@@ -1283,3 +1283,65 @@ video {
     color: white;
     border-color: var(--primary-color);
 }
+
+/* ===== GM CUSTOMIZATION STYLES ===== */
+.gm-customization .customization-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.customization-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.75rem;
+    background: var(--bg-medium);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.customization-group label {
+    font-weight: 500;
+    color: var(--text-light);
+    min-width: 140px;
+}
+
+.color-input {
+    width: 60px;
+    height: 40px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-light);
+    cursor: pointer;
+    padding: 0;
+}
+
+.color-input:hover {
+    border-color: var(--primary-color);
+}
+
+.customization-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+    .customization-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .customization-group label {
+        min-width: auto;
+    }
+    
+    .customization-actions {
+        flex-direction: column;
+    }
+}

@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1 class="room-title">Game Master Control</h1>
+            <h1 class="room-title" id="gm-page-title">Game Master Control</h1>
             <div class="status-badges">
                 <span class="status-badge" id="connection-status">Connected</span>
             </div>
@@ -160,6 +160,42 @@
                     <h3>Audio Library</h3>
                     <div id="audio-library" class="audio-library-grid">
                         <!-- Audio files will be populated by JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- GM Page Customization -->
+            <section class="gm-customization gm-control-section">
+                <h2 class="section-heading">🎨 GM Page Customization</h2>
+                <div class="customization-controls">
+                    <div class="customization-group">
+                        <label for="gm-bg-color">Background Color:</label>
+                        <input type="color" id="gm-bg-color" class="color-input" value="#1a1a1a">
+                        <button class="nav-button secondary" id="reset-bg-color">Reset</button>
+                    </div>
+                    
+                    <div class="customization-group">
+                        <label for="gm-bg-image">Background Image:</label>
+                        <input type="file" id="gm-bg-image" accept="image/*" style="display: none;">
+                        <button class="nav-button secondary" id="choose-bg-image">Choose Image</button>
+                        <button class="nav-button secondary" id="remove-bg-image">Remove Image</button>
+                    </div>
+                    
+                    <div class="customization-group">
+                        <label for="gm-primary-color">Button/Primary Color:</label>
+                        <input type="color" id="gm-primary-color" class="color-input" value="#007bff">
+                        <button class="nav-button secondary" id="reset-primary-color">Reset</button>
+                    </div>
+                    
+                    <div class="customization-group">
+                        <label for="gm-text-color">Text Color:</label>
+                        <input type="color" id="gm-text-color" class="color-input" value="#ffffff">
+                        <button class="nav-button secondary" id="reset-text-color">Reset</button>
+                    </div>
+                    
+                    <div class="customization-actions">
+                        <button class="nav-button" id="save-gm-customization">Save Customization</button>
+                        <button class="nav-button secondary" id="reset-all-customization">Reset All</button>
                     </div>
                 </div>
             </section>

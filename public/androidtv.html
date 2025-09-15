@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quandary Control - Android TV Portal</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        /* Android TV Optimized Styles */
+        :root {
+            --tv-primary: #667eea;
+            --tv-secondary: #764ba2;
+            --tv-accent: #ff6b6b;
+            --bg-dark: #000000;
+            --bg-medium: #111111;
+            --bg-light: #222222;
+            --text-light: #ffffff;
+            --text-muted: #cccccc;
+            --focus-color: #00d4ff;
+            --focus-glow: 0 0 20px rgba(0, 212, 255, 0.8);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--tv-primary) 0%, var(--tv-secondary) 100%);
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .header h1 {
+            font-size: 4rem;
+            font-weight: bold;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .header p {
+            font-size: 1.5rem;
+            margin: 1rem 0 0;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 3rem 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .loading-message {
+            font-size: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            margin: 2rem 0;
+        }
+
+        .rooms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            margin-top: 2rem;
+        }
+
+        .room-card {
+            background: var(--bg-light);
+            border: 3px solid transparent;
+            border-radius: 20px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .room-card:focus {
+            outline: none;
+            border-color: var(--focus-color);
+            box-shadow: var(--focus-glow);
+            transform: scale(1.05);
+            background: var(--bg-medium);
+        }
+
+        .room-card:hover {
+            border-color: var(--focus-color);
+            transform: scale(1.02);
+        }
+
+        .room-name {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: var(--text-light);
+            text-align: center;
+        }
+
+        .room-shortcode {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 1rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .room-actions {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .room-actions.visible {
+            display: grid;
+        }
+
+        .action-button {
+            background: linear-gradient(135deg, var(--tv-primary) 0%, var(--tv-secondary) 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            padding: 1.5rem 2rem;
+            font-size: 1.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-button:focus {
+            outline: none;
+            border-color: var(--focus-color);
+            box-shadow: var(--focus-glow);
+            transform: scale(1.05);
+        }
+
+        .action-button:hover {
+            transform: scale(1.02);
+        }
+
+        .action-button.rules {
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
+        }
+
+        .action-button.play {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .back-button {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            background: var(--bg-light);
+            color: var(--text-light);
+            border: 3px solid transparent;
+            border-radius: 15px;
+            padding: 1rem 2rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+        }
+
+        .back-button.visible {
+            display: block;
+        }
+
+        .back-button:focus {
+            outline: none;
+            border-color: var(--focus-color);
+            box-shadow: var(--focus-glow);
+        }
+
+        .navigation-help {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(0,0,0,0.8);
+            color: var(--text-light);
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        @media (max-width: 768px) {
+            .rooms-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .header h1 {
+                font-size: 3rem;
+            }
+            
+            .room-name {
+                font-size: 2rem;
+            }
+        }
+
+        /* Animation for room selection */
+        @keyframes roomSelect {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1.05); }
+        }
+
+        .room-card.selecting {
+            animation: roomSelect 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 Quandary Control</h1>
+        <p>Android TV Portal - Use your remote to navigate</p>
+    </div>
+
+    <button class="back-button" id="backButton" tabindex="0">
+        ← Back to Rooms
+    </button>
+
+    <div class="main-content">
+        <div class="loading-message" id="loadingMessage">
+            Loading rooms...
+        </div>
+
+        <div class="rooms-grid" id="roomsGrid">
+            <!-- Rooms will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <div class="navigation-help">
+        Use ↑↓←→ arrows and OK/Enter to navigate
+    </div>
+
+    <script src="/androidtv.js"></script>
+</body>
+</html>

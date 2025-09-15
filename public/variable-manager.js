@@ -137,6 +137,17 @@ class VariableManager {
                 this.hideModal('variable-form-modal');
             }
         });
+
+        // Main variable modal close handlers
+        document.getElementById('close-variable-modal')?.addEventListener('click', () => this.hideModal('variable-modal'));
+        document.getElementById('cancel-variable-btn')?.addEventListener('click', () => this.hideModal('variable-modal'));
+        
+        // Modal backdrop click for main variable modal
+        document.getElementById('variable-modal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'variable-modal') {
+                this.hideModal('variable-modal');
+            }
+        });
     }
 
     setCurrentRoom(roomId) {
@@ -294,8 +305,8 @@ class VariableManager {
                 <div class="trigger-header">
                     <div class="trigger-name">${trigger.name}</div>
                     <div class="trigger-actions">
-                        <button class="btn-edit-variable" data-trigger="${index}">Edit</button>
-                        <button class="btn-delete-variable" data-trigger="${index}">Delete</button>
+                        <button class="btn-edit-trigger" data-trigger="${index}">Edit</button>
+                        <button class="btn-delete-trigger" data-trigger="${index}">Delete</button>
                     </div>
                 </div>
                 <div class="trigger-condition">
@@ -307,6 +318,15 @@ class VariableManager {
             `;
 
             container.appendChild(triggerDiv);
+        });
+
+        // Bind edit and delete handlers for triggers
+        container.querySelectorAll('.btn-edit-trigger').forEach(btn => {
+            btn.addEventListener('click', (e) => this.editTrigger(parseInt(e.target.dataset.trigger)));
+        });
+        
+        container.querySelectorAll('.btn-delete-trigger').forEach(btn => {
+            btn.addEventListener('click', (e) => this.deleteTrigger(parseInt(e.target.dataset.trigger)));
         });
     }
 
@@ -738,7 +758,14 @@ class VariableManager {
             return;
         }
         
-        this.triggers.push(triggerData);
+        if (this.currentTrigger !== null) {
+            // Update existing trigger
+            this.triggers[this.currentTrigger] = triggerData;
+        } else {
+            // Add new trigger
+            this.triggers.push(triggerData);
+        }
+        
         this.renderTriggers();
         this.closeTriggerForm();
     }
@@ -751,6 +778,45 @@ class VariableManager {
         if (confirm(`Are you sure you want to delete the variable "${variableName}"?`)) {
             delete this.variables[variableName];
             this.renderVariables();
+        }
+    }
+
+    editTrigger(triggerIndex) {
+        const trigger = this.triggers[triggerIndex];
+        if (!trigger) return;
+
+        // Populate the form with existing trigger data
+        document.getElementById('trigger-name').value = trigger.name;
+        document.getElementById('trigger-variable').innerHTML = '<option value="">Select a variable...</option>';
+        
+        Object.keys(this.variables).forEach(varName => {
+            const option = document.createElement('option');
+            option.value = varName;
+            option.textContent = varName;
+            option.selected = varName === trigger.variable;
+            document.getElementById('trigger-variable').appendChild(option);
+        });
+
+        document.getElementById('trigger-condition').value = trigger.condition;
+        document.getElementById('trigger-value').value = trigger.value;
+        
+        // Set up the actions
+        this.triggerActions = [...trigger.actions];
+        this.renderTriggerActions();
+
+        // Store the trigger index for updating
+        this.currentTrigger = triggerIndex;
+
+        this.showModal('trigger-form-modal');
+    }
+
+    deleteTrigger(triggerIndex) {
+        const trigger = this.triggers[triggerIndex];
+        if (!trigger) return;
+
+        if (confirm(`Are you sure you want to delete the trigger "${trigger.name}"?`)) {
+            this.triggers.splice(triggerIndex, 1);
+            this.renderTriggers();
         }
     }
 
