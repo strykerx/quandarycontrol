@@ -1812,23 +1812,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hasUnsavedChanges = true;
     }
 
-    // Add button to open settings panel
-    function addSettingsButton() {
-        const actionsHeader = document.querySelector('.actions-header');
-        if (actionsHeader) {
-            const settingsBtn = document.createElement('button');
-            settingsBtn.className = 'btn-secondary';
-            settingsBtn.id = 'open-owner-settings-btn';
-            settingsBtn.innerHTML = '⚙️ Owner Settings';
-            settingsBtn.addEventListener('click', openOwnerCustomizationModal);
 
-            actionsHeader.appendChild(settingsBtn);
-        }
-    }
-
-    // Initialize owner customization functions
-    initializeOwnerCustomization();
-    addSettingsButton();
 
     // Event listener for keyboard shortcuts
     document.addEventListener('keydown', (e) => {
@@ -1847,62 +1831,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Initialize Theme Manager
-    document.addEventListener('DOMContentLoaded', function() {
-        // Wait for theme manager to be ready
-        window.addEventListener('themeManagerReady', function(e) {
-            const themeManager = window.themeManager;
-            
-            // Add theme selector styles
-            themeManager.addThemeSelectorStyles();
-            
-            // Create theme selector in the admin interface
-            themeManager.createThemeSelector('theme-selector-container', function(selectedTheme) {
-                // Update theme info when theme changes
-                const themeInfo = document.getElementById('theme-info');
-                const theme = themeManager.getTheme(selectedTheme);
-                if (theme && themeInfo) {
-                    themeInfo.textContent = `Current theme: ${theme.name} - ${theme.description}`;
-                }
-                
-                // If live preview is enabled, show a notification
-                if (themeManager.isLivePreviewEnabled()) {
-                    // Create a temporary notification
-                    const notification = document.createElement('div');
-                    notification.style.cssText = `
-                        position: fixed;
-                        top: 20px;
-                        right: 20px;
-                        background: var(--bg-medium);
-                        color: var(--text-light);
-                        padding: 1rem;
-                        border-radius: var(--border-radius);
-                        box-shadow: var(--shadow);
-                        z-index: 1000;
-                        animation: slideIn 0.3s ease-out;
-                    `;
-                    notification.textContent = `Theme changed to ${theme.name}`;
-                    document.body.appendChild(notification);
-                    
-                    // Remove notification after 3 seconds
-                    setTimeout(() => {
-                        notification.style.animation = 'slideOut 0.3s ease-out';
-                        setTimeout(() => {
-                            document.body.removeChild(notification);
-                        }, 300);
-                    }, 3000);
-                }
-            });
-            
-            // Update initial theme info
-            const themeInfo = document.getElementById('theme-info');
-            const currentTheme = themeManager.getCurrentTheme();
-            const theme = themeManager.getTheme(currentTheme);
-            if (theme && themeInfo) {
-                themeInfo.textContent = `Current theme: ${theme.name} - ${theme.description}`;
-            }
-        });
-    });
     
     // Layout Management Functionality
     document.addEventListener('DOMContentLoaded', function() {
@@ -2779,33 +2707,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const applyPreviewThemeBtn = document.getElementById('apply-preview-theme-btn');
     const themePreviewContent = document.getElementById('theme-preview-content');
     
-    if (previewThemeBtn) {
-        previewThemeBtn.addEventListener('click', function() {
-            const themeManager = window.themeManager;
-            const currentTheme = themeManager.getCurrentTheme();
-            const theme = themeManager.getTheme(currentTheme);
-            
-            if (theme) {
-                showThemePreview(theme);
-            }
-        });
-    }
+    // Preview theme functionality disabled - themeManager removed
     
-    if (applyThemeBtn) {
-        applyThemeBtn.addEventListener('click', function() {
-            const themeManager = window.themeManager;
-            const currentTheme = themeManager.getCurrentTheme();
-            
-            // Show confirmation dialog
-            if (confirm(`Are you sure you want to apply the "${themeManager.getTheme(currentTheme).name}" theme to all rooms?`)) {
-                // Apply theme to all rooms (this would typically involve an API call)
-                applyThemeToAllRooms(currentTheme);
-                
-                // Show success notification
-                showNotification('Theme applied to all rooms successfully!', 'success');
-            }
-        });
-    }
+    // Apply theme functionality disabled - themeManager removed
     
     if (closePreviewModal) {
         closePreviewModal.addEventListener('click', closeThemePreview);
@@ -2815,21 +2719,7 @@ document.addEventListener('DOMContentLoaded', function() {
         closePreviewBtn.addEventListener('click', closeThemePreview);
     }
     
-    if (applyPreviewThemeBtn) {
-        applyPreviewThemeBtn.addEventListener('click', function() {
-            const themeManager = window.themeManager;
-            const currentTheme = themeManager.getCurrentTheme();
-            
-            // Apply theme to all rooms
-            applyThemeToAllRooms(currentTheme);
-            
-            // Close preview
-            closeThemePreview();
-            
-            // Show success notification
-            showNotification('Theme applied to all rooms successfully!', 'success');
-        });
-    }
+    // Apply preview theme functionality disabled - themeManager removed
     
     // Close modal when clicking outside
     window.addEventListener('click', function(event) {
@@ -2889,9 +2779,7 @@ document.addEventListener('DOMContentLoaded', function() {
         themePreviewContent.innerHTML = previewHTML;
         themePreviewModal.style.display = 'block';
         
-        // Apply the theme to the preview content
-        const themeManager = window.themeManager;
-        themeManager.applyTheme(themeManager.getCurrentTheme());
+        // Theme application disabled - themeManager removed
     }
     
     function closeThemePreview() {

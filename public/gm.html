@@ -22,8 +22,12 @@
                     <button class="nav-button" id="start-timer">Start</button>
                     <button class="nav-button" id="pause-timer">Pause</button>
                     <button class="nav-button" id="stop-timer">Stop</button>
-                    <button class="nav-button secondary" id="add-time">+30s</button>
-                    <button class="nav-button secondary" id="subtract-time">-30s</button>
+                    <div class="timer-separator"></div>
+                    <button class="nav-button secondary timer-adjust" id="add-time">+1m</button>
+                    <button class="nav-button secondary timer-adjust" id="subtract-time">-1m</button>
+                    <input type="number" id="custom-time" class="form-input" placeholder="Custom minutes" min="1" max="60" style="width: 100px; margin-left: 10px;">
+                    <button class="nav-button secondary timer-adjust" id="add-custom-time">+</button>
+                    <button class="nav-button secondary timer-adjust" id="subtract-custom-time">-</button>
                     <div class="timer-display" id="timer-display">00:00</div>
                 </div>
             </section>
@@ -34,8 +38,12 @@
                     <button class="nav-button" id="start-secondary-timer">Start</button>
                     <button class="nav-button" id="pause-secondary-timer">Pause</button>
                     <button class="nav-button" id="stop-secondary-timer">Stop</button>
-                    <button class="nav-button secondary" id="add-secondary-time">+30s</button>
-                    <button class="nav-button secondary" id="subtract-secondary-time">-30s</button>
+                    <div class="timer-separator"></div>
+                    <button class="nav-button secondary timer-adjust" id="add-secondary-time">+1m</button>
+                    <button class="nav-button secondary timer-adjust" id="subtract-secondary-time">-1m</button>
+                    <input type="number" id="custom-secondary-time" class="form-input" placeholder="Custom minutes" min="1" max="60" style="width: 100px; margin-left: 10px;">
+                    <button class="nav-button secondary timer-adjust" id="add-custom-secondary-time">+</button>
+                    <button class="nav-button secondary timer-adjust" id="subtract-custom-secondary-time">-</button>
                     <div class="timer-display" id="secondary-timer-display">00:00</div>
                 </div>
             </section>

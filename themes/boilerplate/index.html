@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[room-info field="name"]</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/themes/boilerplate/style.css">
+</head>
+<body class="theme-boilerplate">
+    <div class="boilerplate-container">
+        <!-- HEADER SECTION -->
+        <header class="boilerplate-header">
+            <div class="room-info-wrapper">
+                [room-info]
+            </div>
+        </header>
+        
+        <!-- MAIN CONTENT -->
+        <main class="boilerplate-main">
+            <!-- TIMER COMPONENT -->
+            <section class="timer-section">
+                <div class="component-wrapper">
+                    <h2 class="component-title">Timer</h2>
+                    <div class="timer-content">
+                        [timer format="mm:ss" showControls="true"]
+                    </div>
+                </div>
+            </section>
+            
+            <!-- CHAT COMPONENT -->
+            <section class="chat-section">
+                <div class="component-wrapper">
+                    <h2 class="component-title">Chat</h2>
+                    <div class="chat-content">
+                        [chat maxMessages="50" showTimestamps="true"]
+                    </div>
+                </div>
+            </section>
+            
+            <!-- HINTS COMPONENT -->
+            <section class="hints-section">
+                <div class="component-wrapper">
+                    <h2 class="component-title">Hints</h2>
+                    <div class="hints-content">
+                        [hints maxHints="20" showNavigation="true"]
+                    </div>
+                </div>
+            </section>
+            
+            <!-- VARIABLES COMPONENT -->
+            <section class="variables-section">
+                <div class="component-wrapper">
+                    <h2 class="component-title">Variables</h2>
+                    <div class="variables-content">
+                        [variables updateInterval="1000"]
+                    </div>
+                </div>
+            </section>
+            
+            <!-- MEDIA COMPONENT -->
+            <section class="media-section">
+                <div class="component-wrapper">
+                    <h2 class="component-title">Media</h2>
+                    <div class="media-content">
+                        [media supportedFormats="jpg,png,gif,mp4,mp3" position="lightbox"]
+                    </div>
+                </div>
+            </section>
+            
+            <!-- GAME STATE COMPONENT -->
+            <section class="game-state-section">
+                <div class="component-wrapper">
+                    <h2 class="component-title">Game State</h2>
+                    <div class="game-state-content">
+                        [game-state showScore="true" updateInterval="1000"]
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <!-- FOOTER SECTION -->
+        <footer class="boilerplate-footer">
+            <div class="footer-content">
+                Boilerplate Theme
+            </div>
+        </footer>
+    </div>
+    
+    <!-- HIDDEN ELEMENTS -->
+    <div style="display: none;">
+        <button id="start-rules-button"></button>
+        <div id="system-elements"></div>
+    </div>
+    
+    <!-- SCRIPTS -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/player.js"></script>
+</body>
+</html>

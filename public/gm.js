@@ -284,7 +284,7 @@ document.getElementById('add-time').addEventListener('click', () => {
   socket.emit('timer_control', {
     roomId,
     action: 'adjust',
-    amount: 30
+    amount: 60
   });
 });
 
@@ -293,7 +293,7 @@ document.getElementById('subtract-time').addEventListener('click', () => {
   socket.emit('timer_control', {
     roomId,
     action: 'adjust',
-    amount: -30
+    amount: -60
   });
 });
 
@@ -327,7 +327,7 @@ document.getElementById('add-secondary-time').addEventListener('click', () => {
   socket.emit('secondary_timer_control', {
     roomId,
     action: 'adjust',
-    amount: 30
+    amount: 60
   });
 });
 
@@ -336,7 +336,7 @@ document.getElementById('subtract-secondary-time').addEventListener('click', () 
   socket.emit('secondary_timer_control', {
     roomId,
     action: 'adjust',
-    amount: -30
+    amount: -60
   });
 });
 
@@ -384,6 +384,56 @@ document.getElementById('stop-both-timers').addEventListener('click', () => {
   // Also clear chat and hints when stopping both timers
   socket.emit('clear_chat', { roomId });
   socket.emit('clear_hints', { roomId });
+});
+
+// Custom Timer Controls - Primary Timer
+document.getElementById('add-custom-time').addEventListener('click', () => {
+  const customMinutes = parseInt(document.getElementById('custom-time').value) || 0;
+  if (customMinutes > 0) {
+    console.log('Add custom time clicked:', customMinutes, 'minutes, roomId:', roomId);
+    socket.emit('timer_control', {
+      roomId,
+      action: 'adjust',
+      amount: customMinutes * 60
+    });
+  }
+});
+
+document.getElementById('subtract-custom-time').addEventListener('click', () => {
+  const customMinutes = parseInt(document.getElementById('custom-time').value) || 0;
+  if (customMinutes > 0) {
+    console.log('Subtract custom time clicked:', customMinutes, 'minutes, roomId:', roomId);
+    socket.emit('timer_control', {
+      roomId,
+      action: 'adjust',
+      amount: -(customMinutes * 60)
+    });
+  }
+});
+
+// Custom Timer Controls - Secondary Timer
+document.getElementById('add-custom-secondary-time').addEventListener('click', () => {
+  const customMinutes = parseInt(document.getElementById('custom-secondary-time').value) || 0;
+  if (customMinutes > 0) {
+    console.log('Add custom secondary time clicked:', customMinutes, 'minutes, roomId:', roomId);
+    socket.emit('secondary_timer_control', {
+      roomId,
+      action: 'adjust',
+      amount: customMinutes * 60
+    });
+  }
+});
+
+document.getElementById('subtract-custom-secondary-time').addEventListener('click', () => {
+  const customMinutes = parseInt(document.getElementById('custom-secondary-time').value) || 0;
+  if (customMinutes > 0) {
+    console.log('Subtract custom secondary time clicked:', customMinutes, 'minutes, roomId:', roomId);
+    socket.emit('secondary_timer_control', {
+      roomId,
+      action: 'adjust',
+      amount: -(customMinutes * 60)
+    });
+  }
 });
 
 // Clear chat button

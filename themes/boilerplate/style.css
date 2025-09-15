@@ -1,0 +1,368 @@
+/* =======================================
+   BOILERPLATE THEME - MINIMAL STYLING
+   ======================================= */
+
+/* CSS VARIABLES - Customize these for your theme */
+:root {
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --background-color: #f8f9fa;
+  --text-color: #212529;
+  --border-color: #dee2e6;
+  --border-radius: 0.25rem;
+  --font-family: 'Arial', sans-serif;
+  --spacing-small: 0.5rem;
+  --spacing-medium: 1rem;
+  --spacing-large: 1.5rem;
+  --spacing-xl: 2rem;
+}
+
+/* GLOBAL STYLES */
+.theme-boilerplate {
+  font-family: var(--font-family);
+  color: var(--text-color);
+  background-color: var(--background-color);
+  line-height: 1.5;
+}
+
+.theme-boilerplate * {
+  box-sizing: border-box;
+}
+
+/* MAIN CONTAINER */
+.boilerplate-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HEADER */
+.boilerplate-header {
+  padding: var(--spacing-medium);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.room-info-wrapper {
+  /* Add your room info styles here */
+}
+
+/* MAIN CONTENT */
+.boilerplate-main {
+  flex: 1;
+  padding: var(--spacing-medium);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-large);
+}
+
+/* COMPONENT WRAPPER */
+.component-wrapper {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-medium);
+}
+
+.component-title {
+  margin: 0 0 var(--spacing-medium) 0;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+/* TIMER COMPONENT */
+.timer-section {
+  /* Add timer-specific styles here */
+}
+
+.timer-content {
+  /* Timer content wrapper */
+}
+
+.timer-component {
+  /* Timer component styles */
+}
+
+.timer-display {
+  /* Timer display styles */
+}
+
+.timer-status {
+  /* Timer status styles */
+}
+
+.timer-controls {
+  /* Timer controls styles */
+}
+
+.timer-controls button {
+  /* Timer control buttons */
+}
+
+/* CHAT COMPONENT */
+.chat-section {
+  /* Add chat-specific styles here */
+}
+
+.chat-content {
+  /* Chat content wrapper */
+}
+
+.chat-component {
+  /* Chat component styles */
+}
+
+.chat-header {
+  /* Chat header styles */
+}
+
+.chat-log {
+  /* Chat messages area */
+}
+
+.chat-message {
+  /* Individual chat message */
+}
+
+.chat-message.player {
+  /* Player messages */
+}
+
+.chat-message.gm {
+  /* Game master messages */
+}
+
+.chat-timestamp {
+  /* Message timestamps */
+}
+
+.chat-input-container {
+  /* Chat input area */
+}
+
+.chat-input {
+  /* Chat input field */
+}
+
+.chat-submit {
+  /* Chat submit button */
+}
+
+/* HINTS COMPONENT */
+.hints-section {
+  /* Add hints-specific styles here */
+}
+
+.hints-content {
+  /* Hints content wrapper */
+}
+
+.hints-component {
+  /* Hints component styles */
+}
+
+.hints-header {
+  /* Hints header styles */
+}
+
+.hint-container {
+  /* Hints display area */
+}
+
+.hint-card {
+  /* Individual hint card */
+}
+
+.hint-placeholder {
+  /* No hints message */
+}
+
+.hint-navigation {
+  /* Hint navigation buttons */
+}
+
+.hint-navigation button {
+  /* Navigation buttons */
+}
+
+.hint-overlay {
+  /* Full-screen hint overlay */
+}
+
+.hint-overlay-content {
+  /* Overlay content area */
+}
+
+.overlay-hint-text {
+  /* Overlay hint text */
+}
+
+.hint-overlay-close {
+  /* Overlay close button */
+}
+
+/* VARIABLES COMPONENT */
+.variables-section {
+  /* Add variables-specific styles here */
+}
+
+.variables-content {
+  /* Variables content wrapper */
+}
+
+.variables-component {
+  /* Variables component styles */
+}
+
+.variables-header {
+  /* Variables header styles */
+}
+
+.variable-display {
+  /* Variables display area */
+}
+
+.variable-item {
+  /* Individual variable */
+}
+
+.variable-name {
+  /* Variable name */
+}
+
+.variable-value {
+  /* Variable value */
+}
+
+.variable-placeholder {
+  /* Loading/empty message */
+}
+
+.state-item {
+  /* State item (alternative class) */
+}
+
+/* MEDIA COMPONENT */
+.media-section {
+  /* Add media-specific styles here */
+}
+
+.media-content {
+  /* Media content wrapper */
+}
+
+.media-component {
+  /* Media component styles */
+}
+
+.lightbox {
+  /* Lightbox overlay */
+}
+
+.lightbox-content {
+  /* Lightbox content area */
+}
+
+.lightbox-header {
+  /* Lightbox header */
+}
+
+.lightbox-headline {
+  /* Lightbox title */
+}
+
+.lightbox-close {
+  /* Close button */
+}
+
+.lightbox-media {
+  /* Media display area */
+}
+
+.lightbox img {
+  /* Images in lightbox */
+}
+
+.lightbox video {
+  /* Videos in lightbox */
+}
+
+.lightbox audio {
+  /* Audio in lightbox */
+}
+
+/* GAME STATE COMPONENT */
+.game-state-section {
+  /* Add game state-specific styles here */
+}
+
+.game-state-content {
+  /* Game state content wrapper */
+}
+
+.game-state-component {
+  /* Game state component styles */
+}
+
+.game-score {
+  /* Score display */
+}
+
+.game-status {
+  /* Current game status */
+}
+
+.config-display {
+  /* Configuration display area */
+}
+
+.state-section {
+  /* Alternative container class */
+}
+
+.state-card {
+  /* State card styling */
+}
+
+/* ROOM INFO COMPONENT */
+.room-info-component {
+  /* Room info container */
+}
+
+.room-title {
+  /* Room name/title */
+}
+
+.room-info {
+  /* Room details (code, etc.) */
+}
+
+.room-progress {
+  /* Progress indicators */
+}
+
+/* FOOTER */
+.boilerplate-footer {
+  padding: var(--spacing-medium);
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.footer-content {
+  /* Footer content styles */
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+  .boilerplate-main {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-medium);
+  }
+}
+
+@media (max-width: 480px) {
+  .boilerplate-header,
+  .boilerplate-main,
+  .boilerplate-footer {
+    padding: var(--spacing-small);
+  }
+}

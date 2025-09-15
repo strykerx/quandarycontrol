@@ -129,27 +129,18 @@ function loadThemes() {
         sort: sort
     });
     
-    fetch(`/api/themes?${params}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                themes = data.data.themes;
-                currentPage = data.data.page;
-                totalPages = data.data.totalPages;
-                
-                renderThemes();
-                updatePagination();
-                
-                console.log(`Loaded ${themes.length} themes (page ${currentPage} of ${totalPages})`);
-            } else {
-                console.error('Failed to load themes:', data.error);
-                showNotification('Failed to load themes: ' + (data.error || 'Unknown error'), 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading themes:', error);
-            showNotification('Error loading themes: ' + error.message, 'error');
-        });
+    // Theme gallery API not available - using placeholder data
+    console.log('Theme gallery API not available, showing placeholder');
+    
+    // Set placeholder data
+    themes = [];
+    currentPage = 1;
+    totalPages = 1;
+    
+    renderThemes();
+    updatePagination();
+    
+    console.log('Theme gallery loaded with placeholder data');
 }
 
 // Render themes in the gallery

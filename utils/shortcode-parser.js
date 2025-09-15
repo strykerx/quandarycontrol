@@ -60,12 +60,13 @@ class ShortcodeParser {
     renderTimer(attrs, roomData) {
         const format = attrs.format || 'mm:ss';
         const showControls = attrs.showControls !== 'false';
+        const showConnectionStatus = attrs.connection_status !== 'false';
         const className = attrs.class || '';
         
         return `
             <div class="timer-component ${className}">
                 <div id="timer-display" class="timer-display ${className}" data-format="${format}">00:00</div>
-                <div id="status-badge" class="timer-status">Ready</div>
+                ${showConnectionStatus ? '<div id="status-badge" class="timer-status">Ready</div>' : ''}
                 ${showControls ? '<div class="timer-controls" id="timer-controls"></div>' : ''}
             </div>
         `;
@@ -110,6 +111,7 @@ class ShortcodeParser {
         const showNavigation = attrs.showNavigation !== 'false';
         const autoCycle = attrs.autoCycle === 'true';
         const display = attrs.display || 'default';
+        const showHeader = attrs.hints_header !== 'false';
         const className = attrs.class || '';
         
         if (display === 'ticker') {
@@ -124,10 +126,12 @@ class ShortcodeParser {
         
         return `
             <div class="hints-component ${className}" id="hints-section">
+                ${showHeader ? `
                 <div class="hints-header">
                     <h3>Hints</h3>
                     ${showNavigation ? '<div class="hint-navigation" id="hint-navigation"></div>' : ''}
                 </div>
+                ` : ''}
                 <div class="hint-container ${className}" id="hint-container" data-max-hints="${maxHints}" data-auto-cycle="${autoCycle}">
                     <div class="hint-placeholder">No hints received yet</div>
                 </div>

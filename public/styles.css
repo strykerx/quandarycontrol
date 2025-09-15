@@ -215,9 +215,9 @@ body {
     background: var(--player-primary);
     color: var(--text-light);
     border: none;
-    padding: 1rem 2rem;
-    border-radius: 30px;
-    font-size: 1.1rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -242,6 +242,59 @@ body {
 #start-rules-button:hover {
     filter: brightness(1.15);
     transform: translateY(-2px);
+}
+
+/* Timer Button Color Coding */
+/* Start buttons - Green */
+#start-timer,
+#start-secondary-timer,
+#start-both-timers {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+}
+
+/* Pause buttons - Orange */
+#pause-timer,
+#pause-secondary-timer,
+#pause-both-timers {
+    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+}
+
+/* Stop buttons - Red */
+#stop-timer,
+#stop-secondary-timer,
+#stop-both-timers {
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+}
+
+/* Add time buttons - Blue */
+#add-time,
+#add-secondary-time,
+#add-custom-time,
+#add-custom-secondary-time {
+    background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+}
+
+/* Subtract time buttons - Purple */
+#subtract-time,
+#subtract-secondary-time,
+#subtract-custom-time,
+#subtract-custom-secondary-time {
+    background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+}
+
+/* Timer Controls Layout */
+.timer-separator {
+    width: 2px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 0 10px;
+    align-self: center;
+}
+
+/* Timer adjustment buttons - make them narrower */
+.timer-adjust {
+    min-width: 60px !important;
+    padding: 0.35rem 0.6rem !important;
 }
 
 /* GM-specific overrides */
@@ -700,9 +753,9 @@ body {
     
     .nav-button {
         width: auto;
-        min-width: 150px;
-        padding: 1rem 1.75rem;
-        font-size: 1.05rem;
+        min-width: 120px;
+        padding: 0.45rem 0.9rem;
+        font-size: 0.75rem;
     }
     
     /* Status badges */
@@ -806,9 +859,9 @@ body {
     }
     
     .nav-button {
-        min-width: 180px;
-        padding: 1rem 2rem;
-        font-size: 1.1rem;
+        min-width: 135px;
+        padding: 0.45rem 0.9rem;
+        font-size: 0.75rem;
     }
     
     /* Hover effects for desktop */
@@ -879,9 +932,9 @@ body {
     }
     
     .nav-button {
-        min-width: 200px;
-        padding: 1.25rem 2.5rem;
-        font-size: 1.15rem;
+        min-width: 150px;
+        padding: 0.45rem 0.9rem;
+        font-size: 0.75rem;
     }
 }
 
