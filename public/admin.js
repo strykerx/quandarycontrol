@@ -562,7 +562,27 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.deleteRoom = async (id) => {
-        if (!confirm('Are you sure you want to delete this room? This action cannot be undone.')) return;
+        // Get room name for confirmation
+        const room = window.getRoomById(id);
+        const roomName = room ? room.name : 'Unknown Room';
+
+        // Secure delete confirmation - requires typing "DELETE"
+        const confirmText = prompt(
+            `⚠️ WARNING: You are about to permanently delete "${roomName}".\n\n` +
+            `This action CANNOT be undone and will remove:\n` +
+            `• The room and all its settings\n` +
+            `• All associated media files\n` +
+            `• All layout configurations\n` +
+            `• All variables and triggers\n\n` +
+            `To confirm this destructive action, type "DELETE" (all caps) below:`
+        );
+
+        if (confirmText !== 'DELETE') {
+            if (confirmText !== null) { // User didn't cancel
+                alert('❌ Deletion cancelled. You must type "DELETE" exactly to confirm.');
+            }
+            return;
+        }
 
         ui.showLoader(`delete-room-${id}`);
 

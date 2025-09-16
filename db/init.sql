@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS legacy_variables (
     name TEXT NOT NULL,
     type TEXT CHECK(type IN ('boolean', 'integer', 'string')) NOT NULL,
     value TEXT NOT NULL,
-    FOREIGN KEY (room_id) REFERENCES rooms(id)
+    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
 
 -- Timers configuration
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS legacy_timers (
     duration INTEGER NOT NULL,
     remaining INTEGER NOT NULL,
     active BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (room_id) REFERENCES rooms(id)
+    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
 
 -- Hint system storage
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS legacy_hints (
     message TEXT NOT NULL,
     status TEXT CHECK(status IN ('pending', 'sent', 'acknowledged')) DEFAULT 'pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (room_id) REFERENCES rooms(id)
+    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
 
 -- Event triggers
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS room_media (
     metadata JSON DEFAULT '{}',
     order_index INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (room_id) REFERENCES rooms(id)
+    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_room_media_room ON room_media(room_id);
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS lightbox_sequences (
     items JSON NOT NULL DEFAULT '[]', -- array of media ids or objects
     settings JSON DEFAULT '{}',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (room_id) REFERENCES rooms(id)
+    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_lightbox_room ON lightbox_sequences(room_id);
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS room_layouts (
     is_active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_room_layouts_room ON room_layouts(room_id);
@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS notification_audio (
     file_size INTEGER DEFAULT 0,
     mime_type TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_notification_audio_room ON notification_audio(room_id);
@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS notification_settings (
     settings JSON DEFAULT '{}', -- Additional settings like volume, conditions
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE ON DELETE CASCADE,
     FOREIGN KEY (audio_id) REFERENCES notification_audio(id) ON DELETE SET NULL
 );
 

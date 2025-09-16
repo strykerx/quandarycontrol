@@ -1384,16 +1384,41 @@ video {
     border-top: 1px solid var(--border-color);
 }
 
+/* Notification dropdown styling fix */
+.notification-settings-grid select,
+.setting-control select {
+    background: var(--bg-light);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    padding: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.notification-settings-grid select option,
+.setting-control select option {
+    background: var(--bg-light);
+    color: var(--text-light);
+    padding: 0.5rem;
+}
+
+.notification-settings-grid select:focus,
+.setting-control select:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-color: var(--primary-color);
+}
+
 @media (max-width: 768px) {
     .customization-group {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .customization-group label {
         min-width: auto;
     }
-    
+
     .customization-actions {
         flex-direction: column;
     }

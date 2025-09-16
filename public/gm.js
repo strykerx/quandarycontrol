@@ -181,7 +181,10 @@ function displayMediaGallery(mediaItems) {
         <img src="${item.url}" alt="${item.title}" class="media-thumbnail">
         <div class="media-info">
           <span class="media-title">${item.title || 'Untitled'}</span>
-          <button class="btn-select-media" data-media-id="${item.id}">Select</button>
+          <div class="media-buttons">
+            <button class="btn-select-media nav-button secondary" data-media-id="${item.id}">Select</button>
+            <button class="btn-delete-media nav-button secondary" data-media-id="${item.id}" style="background-color: #dc3545; min-width: 35px; padding: 0.5rem;">🗑️</button>
+          </div>
         </div>
       `;
     } else if (item.type === 'video') {
@@ -189,7 +192,10 @@ function displayMediaGallery(mediaItems) {
         <video src="${item.url}" class="media-thumbnail" muted></video>
         <div class="media-info">
           <span class="media-title">${item.title || 'Untitled'}</span>
-          <button class="btn-select-media" data-media-id="${item.id}">Select</button>
+          <div class="media-buttons">
+            <button class="btn-select-media nav-button secondary" data-media-id="${item.id}">Select</button>
+            <button class="btn-delete-media nav-button secondary" data-media-id="${item.id}" style="background-color: #dc3545; min-width: 35px; padding: 0.5rem;">🗑️</button>
+          </div>
         </div>
       `;
     }
@@ -197,11 +203,18 @@ function displayMediaGallery(mediaItems) {
     gallery.appendChild(mediaElement);
   });
   
-  // Add event listeners for media selection
+  // Add event listeners for media selection and deletion
   document.querySelectorAll('.btn-select-media').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const mediaId = e.target.dataset.mediaId;
       selectMediaForLightbox(mediaId);
+    });
+  });
+
+  document.querySelectorAll('.btn-delete-media').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const mediaId = e.target.dataset.mediaId;
+      deleteMediaFile(mediaId);
     });
   });
 }
@@ -251,6 +264,80 @@ function showLightboxOnPlayer() {
   socket.emit('show_lightbox', payload);
 }
 
+async function deleteMediaFile(mediaId) {
+  if (!confirm('Are you sure you want to delete this media file?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/media/${mediaId}`, {
+      method: 'DELETE'
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      // Clear selection if the deleted media was selected
+      if (selectedMediaId === mediaId) {
+        selectedMediaId = null;
+      }
+
+      // Reload media gallery
+      loadRoomMedia();
+
+      // Show success message
+      const statusEl = document.getElementById('upload-status');
+      if (statusEl) {
+        statusEl.textContent = 'Media file deleted successfully';
+        setTimeout(() => {
+          statusEl.textContent = '';
+        }, 3000);
+      }
+    } else {
+      alert(`Failed to delete media: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('Error deleting media:', error);
+    alert('Failed to delete media file');
+  }
+}
+
+async function resetTimerToOriginal() {
+  try {
+    // Fetch room data to get original timer duration
+    const response = await fetch(`/api/rooms/${roomId}`);
+    const data = await response.json();
+
+    if (data.success && data.data && data.data.timer_duration !== undefined) {
+      const originalDuration = data.data.timer_duration;
+
+      if (originalDuration > 0) {
+        // Reset timer to original duration
+        socket.emit('timer_control', {
+          roomId,
+          action: 'reset',
+          amount: originalDuration
+        });
+
+        // Show success message
+        const statusEl = document.getElementById('upload-status');
+        if (statusEl) {
+          statusEl.textContent = `Timer reset to original duration: ${Math.floor(originalDuration/60)}:${(originalDuration%60).toString().padStart(2,'0')}`;
+          setTimeout(() => {
+            statusEl.textContent = '';
+          }, 3000);
+        }
+      } else {
+        alert('No original timer duration set for this room');
+      }
+    } else {
+      alert('Failed to fetch room data');
+    }
+  } catch (error) {
+    console.error('Error resetting timer:', error);
+    alert('Failed to reset timer');
+  }
+}
+
 // Timer Controls
 document.getElementById('start-timer').addEventListener('click', () => {
   console.log('Start timer clicked, roomId:', roomId);
@@ -277,6 +364,11 @@ document.getElementById('stop-timer').addEventListener('click', () => {
   // Also clear chat and hints when stopping timer
   socket.emit('clear_chat', { roomId });
   socket.emit('clear_hints', { roomId });
+});
+
+document.getElementById('reset-timer').addEventListener('click', () => {
+  console.log('Reset timer clicked, roomId:', roomId);
+  resetTimerToOriginal();
 });
 
 document.getElementById('add-time').addEventListener('click', () => {

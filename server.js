@@ -507,6 +507,27 @@ io.on('connection', (socket) => {
           });
         }
         break;
+
+      case 'reset':
+        // Stop the timer if running
+        clearInterval(timer.interval);
+        timer.interval = null;
+
+        // Reset to the specified duration (from the client)
+        if (amount && amount > 0) {
+          timer.duration = amount;
+          timer.remaining = amount;
+        } else {
+          // Fallback: reset to current duration
+          timer.remaining = timer.duration;
+        }
+
+        io.to(roomId).emit('timer_update', {
+          remaining: timer.remaining,
+          duration: timer.duration,
+          running: false
+        });
+        break;
     }
   });
 

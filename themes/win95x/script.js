@@ -557,8 +557,60 @@ class Win95Theme {
     
     showShutdownDialog() {
         const dialog = this.createDialog('Shut Down Windows', 'Are you sure you want to shut down?', () => {
-            document.body.innerHTML = '<div style="text-align: center; margin-top: 200px; font-family: MS Sans Serif; font-size: 14px;">It\'s now safe to turn off your computer.</div>';
+            this.showShutdownScreen();
         });
+    }
+
+    showShutdownScreen() {
+        // Store the original body content
+        const originalContent = document.body.innerHTML;
+
+        // Show shutdown screen
+        document.body.innerHTML = `
+            <div style="
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                background-color: #008080;
+                font-family: 'MS Sans Serif', sans-serif;
+                color: white;
+                text-align: center;
+            ">
+                <div style="font-size: 18px; margin-bottom: 20px;">
+                    It's now safe to turn off your computer.
+                </div>
+                <div style="font-size: 12px; margin-bottom: 30px;">
+                    You can now safely turn off your computer.<br>
+                    If your computer has an ATX power supply, it will turn off automatically.
+                </div>
+                <button onclick="restoreNormalFunction()" style="
+                    background-color: #c0c0c0;
+                    border: 2px outset #c0c0c0;
+                    padding: 8px 16px;
+                    font-family: 'MS Sans Serif', sans-serif;
+                    font-size: 11px;
+                    cursor: pointer;
+                    margin-top: 20px;
+                ">
+                    Restart Computer
+                </button>
+            </div>
+        `;
+
+        // Add the restore function to the global scope
+        window.restoreNormalFunction = () => {
+            document.body.innerHTML = originalContent;
+
+            // Re-initialize the theme
+            setTimeout(() => {
+                new Win95Theme();
+            }, 100);
+
+            // Clean up the global function
+            delete window.restoreNormalFunction;
+        };
     }
     
     showRunDialog() {
