@@ -2796,4 +2796,70 @@ router.put('/rooms/:id/notifications/settings', (req, res) => {
   }
 });
 
+// GM Customization endpoints
+router.get('/rooms/:id/gm-customization', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const customization = db.prepare(`
+      SELECT bg_color, primary_color, secondary_color, text_color, title_color, bg_image_data
+      FROM gm_customizations
+      WHERE room_id = ?
+    `).get(id);
+
+    if (customization) {
+      res.json({ success: true, data: customization });
+    } else {
+      // Return default values if no customization exists
+      res.json({
+        success: true,
+        data: {
+          bg_color: '#1a1a1a',
+          primary_color: '#007bff',
+          secondary_color: '#6c757d',
+          text_color: '#ffffff',
+          title_color: '#ffffff',
+          bg_image_data: null
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching GM customization:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put('/rooms/:id/gm-customization', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { bg_color, primary_color, secondary_color, text_color, title_color, bg_image_data } = req.body;
+    const db = getDatabase();
+
+    // Check if customization already exists
+    const existing = db.prepare('SELECT id FROM gm_customizations WHERE room_id = ?').get(id);
+
+    if (existing) {
+      // Update existing customization
+      db.prepare(`
+        UPDATE gm_customizations
+        SET bg_color = ?, primary_color = ?, secondary_color = ?, text_color = ?, title_color = ?, bg_image_data = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE room_id = ?
+      `).run(bg_color, primary_color, secondary_color, text_color, title_color, bg_image_data, id);
+    } else {
+      // Create new customization
+      const customizationId = nanoid();
+      db.prepare(`
+        INSERT INTO gm_customizations (id, room_id, bg_color, primary_color, secondary_color, text_color, title_color, bg_image_data)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(customizationId, id, bg_color, primary_color, secondary_color, text_color, title_color, bg_image_data);
+    }
+
+    res.json({ success: true, message: 'GM customization saved successfully' });
+  } catch (error) {
+    console.error('Error saving GM customization:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = { router, getRoomByShortcode, checkAndExecuteTriggers };

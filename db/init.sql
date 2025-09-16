@@ -163,3 +163,23 @@ CREATE TABLE IF NOT EXISTS notification_settings (
 
 CREATE INDEX IF NOT EXISTS idx_notification_settings_room ON notification_settings(room_id);
 CREATE INDEX IF NOT EXISTS idx_notification_settings_type ON notification_settings(room_id, setting_type);
+
+-- GM page customizations storage
+CREATE TABLE IF NOT EXISTS gm_customizations (
+    id TEXT PRIMARY KEY,
+    room_id TEXT NOT NULL,
+    bg_color TEXT DEFAULT '#1a1a1a',
+    primary_color TEXT DEFAULT '#007bff',
+    secondary_color TEXT DEFAULT '#6c757d',
+    text_color TEXT DEFAULT '#ffffff',
+    title_color TEXT DEFAULT '#ffffff',
+    bg_image_data TEXT, -- Base64 encoded image data
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_gm_customizations_room ON gm_customizations(room_id);
+
+-- Add new columns to existing gm_customizations table if they don't exist
+-- SQLite doesn't support IF NOT EXISTS for columns, so we'll handle this in the application

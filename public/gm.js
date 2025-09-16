@@ -745,10 +745,11 @@ document.getElementById('edit-rules-button').addEventListener('click', () => {
 class GMCustomization {
   constructor() {
     this.roomId = roomId;
-    this.storageKey = `gm_customization_${this.roomId}`;
     this.defaultColors = {
       bgColor: '#1a1a1a',
       primaryColor: '#007bff',
+      secondaryColor: '#6c757d',
+      titleColor: '#ffffff',
       textColor: '#ffffff'
     };
     this.init();
@@ -779,6 +780,14 @@ class GMCustomization {
       this.updatePrimaryColor(e.target.value);
     });
 
+    document.getElementById('gm-secondary-color')?.addEventListener('change', (e) => {
+      this.updateSecondaryColor(e.target.value);
+    });
+
+    document.getElementById('gm-title-color')?.addEventListener('change', (e) => {
+      this.updateTitleColor(e.target.value);
+    });
+
     document.getElementById('gm-text-color')?.addEventListener('change', (e) => {
       this.updateTextColor(e.target.value);
     });
@@ -790,6 +799,14 @@ class GMCustomization {
 
     document.getElementById('reset-primary-color')?.addEventListener('click', () => {
       this.resetPrimaryColor();
+    });
+
+    document.getElementById('reset-secondary-color')?.addEventListener('click', () => {
+      this.resetSecondaryColor();
+    });
+
+    document.getElementById('reset-title-color')?.addEventListener('click', () => {
+      this.resetTitleColor();
     });
 
     document.getElementById('reset-text-color')?.addEventListener('click', () => {
@@ -881,6 +898,43 @@ class GMCustomization {
     document.head.appendChild(style);
   }
 
+  updateSecondaryColor(color) {
+    const style = document.createElement('style');
+    style.id = 'gm-secondary-color-override';
+    const existingStyle = document.getElementById('gm-secondary-color-override');
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+
+    style.textContent = `
+      .nav-button.secondary {
+        background-color: ${color} !important;
+        border-color: ${color} !important;
+      }
+      .nav-button.secondary:hover {
+        background-color: ${this.darkenColor(color, 10)} !important;
+        border-color: ${this.darkenColor(color, 10)} !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  updateTitleColor(color) {
+    const style = document.createElement('style');
+    style.id = 'gm-title-color-override';
+    const existingStyle = document.getElementById('gm-title-color-override');
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+
+    style.textContent = `
+      .room-title, #gm-page-title {
+        color: ${color} !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   updateTextColor(color) {
     const style = document.createElement('style');
     style.id = 'gm-text-color-override';
@@ -888,9 +942,9 @@ class GMCustomization {
     if (existingStyle) {
       existingStyle.remove();
     }
-    
+
     style.textContent = `
-      .room-title, .section-heading, .container, 
+      .section-heading, .container,
       .gm-control-section, .state-card, .state-content {
         color: ${color} !important;
       }
@@ -919,58 +973,111 @@ class GMCustomization {
     this.updatePrimaryColor(this.defaultColors.primaryColor);
   }
 
+  resetSecondaryColor() {
+    document.getElementById('gm-secondary-color').value = this.defaultColors.secondaryColor;
+    this.updateSecondaryColor(this.defaultColors.secondaryColor);
+  }
+
+  resetTitleColor() {
+    document.getElementById('gm-title-color').value = this.defaultColors.titleColor;
+    this.updateTitleColor(this.defaultColors.titleColor);
+  }
+
   resetTextColor() {
     document.getElementById('gm-text-color').value = this.defaultColors.textColor;
     this.updateTextColor(this.defaultColors.textColor);
   }
 
-  resetAllCustomization() {
+  async resetAllCustomization() {
     if (confirm('Are you sure you want to reset all customizations? This cannot be undone.')) {
       this.removeBackgroundImage();
       this.resetBackgroundColor();
       this.resetPrimaryColor();
+      this.resetSecondaryColor();
+      this.resetTitleColor();
       this.resetTextColor();
-      localStorage.removeItem(this.storageKey);
-      this.showToast('All customizations reset', 'success');
+
+      // Save the reset values to the database
+      try {
+        await this.saveCustomization();
+        this.showToast('All customizations reset', 'success');
+      } catch (error) {
+        console.error('Error resetting customization:', error);
+        this.showToast('Failed to reset customization', 'error');
+      }
     }
   }
 
-  saveCustomization() {
+  async saveCustomization() {
     const customization = {
-      bgColor: document.getElementById('gm-bg-color').value,
-      primaryColor: document.getElementById('gm-primary-color').value,
-      textColor: document.getElementById('gm-text-color').value,
-      bgImage: document.body.style.backgroundImage !== 'none' ? document.body.style.backgroundImage : null
+      bg_color: document.getElementById('gm-bg-color').value,
+      primary_color: document.getElementById('gm-primary-color').value,
+      secondary_color: document.getElementById('gm-secondary-color').value,
+      text_color: document.getElementById('gm-text-color').value,
+      title_color: document.getElementById('gm-title-color').value,
+      bg_image_data: document.body.style.backgroundImage !== 'none' ? document.body.style.backgroundImage : null
     };
 
-    localStorage.setItem(this.storageKey, JSON.stringify(customization));
-    this.showToast('Customization saved successfully!', 'success');
+    try {
+      const response = await fetch(`/api/rooms/${this.roomId}/gm-customization`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(customization)
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        this.showToast('Customization saved successfully!', 'success');
+      } else {
+        this.showToast('Failed to save customization', 'error');
+      }
+    } catch (error) {
+      console.error('Error saving customization:', error);
+      this.showToast('Failed to save customization', 'error');
+    }
   }
 
-  loadCustomization() {
+  async loadCustomization() {
     try {
-      const saved = localStorage.getItem(this.storageKey);
-      if (!saved) return;
+      const response = await fetch(`/api/rooms/${this.roomId}/gm-customization`);
+      const result = await response.json();
 
-      const customization = JSON.parse(saved);
-      
-      if (customization.bgColor) {
-        document.getElementById('gm-bg-color').value = customization.bgColor;
-        this.updateBackgroundColor(customization.bgColor);
+      if (!result.success) {
+        console.error('Failed to load customization:', result.error);
+        return;
       }
-      
-      if (customization.primaryColor) {
-        document.getElementById('gm-primary-color').value = customization.primaryColor;
-        this.updatePrimaryColor(customization.primaryColor);
+
+      const customization = result.data;
+
+      if (customization.bg_color) {
+        document.getElementById('gm-bg-color').value = customization.bg_color;
+        this.updateBackgroundColor(customization.bg_color);
       }
-      
-      if (customization.textColor) {
-        document.getElementById('gm-text-color').value = customization.textColor;
-        this.updateTextColor(customization.textColor);
+
+      if (customization.primary_color) {
+        document.getElementById('gm-primary-color').value = customization.primary_color;
+        this.updatePrimaryColor(customization.primary_color);
       }
-      
-      if (customization.bgImage) {
-        document.body.style.backgroundImage = customization.bgImage;
+
+      if (customization.secondary_color) {
+        document.getElementById('gm-secondary-color').value = customization.secondary_color;
+        this.updateSecondaryColor(customization.secondary_color);
+      }
+
+      if (customization.title_color) {
+        document.getElementById('gm-title-color').value = customization.title_color;
+        this.updateTitleColor(customization.title_color);
+      }
+
+      if (customization.text_color) {
+        document.getElementById('gm-text-color').value = customization.text_color;
+        this.updateTextColor(customization.text_color);
+      }
+
+      if (customization.bg_image_data) {
+        document.body.style.backgroundImage = customization.bg_image_data;
         document.body.style.backgroundSize = 'cover';
         document.body.style.backgroundPosition = 'center';
         document.body.style.backgroundAttachment = 'fixed';
