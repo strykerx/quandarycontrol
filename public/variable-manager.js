@@ -10,7 +10,8 @@ class VariableManager {
         this.currentTrigger = null;
         this.currentActionType = null;
         this.triggerActions = [];
-        
+        this.editingVariable = null; // Track which variable we're editing
+
         this.init();
     }
 
@@ -128,13 +129,13 @@ class VariableManager {
         // Variable form handlers
         document.getElementById('save-variable-form-btn')?.addEventListener('click', (e) => this.saveVariableForm(e));
         document.getElementById('variable-form')?.addEventListener('submit', (e) => this.saveVariableForm(e));
-        document.getElementById('close-variable-form-modal')?.addEventListener('click', () => this.hideModal('variable-form-modal'));
-        document.getElementById('cancel-variable-form-btn')?.addEventListener('click', () => this.hideModal('variable-form-modal'));
+        document.getElementById('close-variable-form-modal')?.addEventListener('click', () => this.closeVariableForm());
+        document.getElementById('cancel-variable-form-btn')?.addEventListener('click', () => this.closeVariableForm());
         
         // Modal backdrop click handlers
         document.getElementById('variable-form-modal')?.addEventListener('click', (e) => {
             if (e.target.id === 'variable-form-modal') {
-                this.hideModal('variable-form-modal');
+                this.closeVariableForm();
             }
         });
 
@@ -159,33 +160,58 @@ class VariableManager {
         if (!this.currentRoomId) return;
 
         try {
-            // Load variables
-            const response = await fetch(`/api/rooms/${this.currentRoomId}/variables`);
-            if (response.ok) {
-                const data = await response.json();
+            // Load variables from room's api_variables field
+            const roomResponse = await fetch(`/api/rooms/${this.currentRoomId}`);
+            let roomData = null;
+
+            if (roomResponse.ok) {
+                roomData = await roomResponse.json();
                 this.variables = {};
-                data.data.forEach(variable => {
-                    this.variables[variable.name] = {
-                        type: variable.type,
-                        value: variable.parsed_value
-                    };
-                });
+
+                if (roomData.success && roomData.data && roomData.data.api_variables) {
+                    try {
+                        const apiVariables = JSON.parse(roomData.data.api_variables);
+                        Object.entries(apiVariables).forEach(([name, value]) => {
+                            // Determine type from the value
+                            let type = 'string';
+                            if (typeof value === 'object' && value !== null) {
+                                if (value.type && value.value !== undefined) {
+                                    // This is a structured variable (like system variables)
+                                    this.variables[name] = value;
+                                    return;
+                                } else if (Array.isArray(value)) {
+                                    type = 'array';
+                                } else {
+                                    type = 'object';
+                                }
+                            } else if (typeof value === 'boolean') {
+                                type = 'boolean';
+                            } else if (typeof value === 'number') {
+                                type = 'number';
+                            }
+
+                            // For simple variables, create the structure
+                            this.variables[name] = {
+                                type: type,
+                                value: value
+                            };
+                        });
+                    } catch (e) {
+                        console.warn('Error parsing api_variables:', e);
+                    }
+                }
             }
 
             // Add default timer variables
             this.addDefaultTimerVariables();
-            
-            // Load triggers from room config
-            const roomResponse = await fetch(`/api/rooms/${this.currentRoomId}`);
-            if (roomResponse.ok) {
-                const roomData = await roomResponse.json();
-                if (roomData.success && roomData.data && roomData.data.config) {
-                    try {
-                        const config = JSON.parse(roomData.data.config);
-                        this.triggers = config.triggers || [];
-                    } catch (e) {
-                        this.triggers = [];
-                    }
+
+            // Load triggers from room config (use the same roomData we already fetched)
+            if (roomData && roomData.success && roomData.data && roomData.data.config) {
+                try {
+                    const config = JSON.parse(roomData.data.config);
+                    this.triggers = config.triggers || [];
+                } catch (e) {
+                    this.triggers = [];
                 }
             } else {
                 this.triggers = [];
@@ -435,20 +461,36 @@ class VariableManager {
     }
 
     openVariableForm(variableName = null) {
+        // Track which variable we're editing
+        this.editingVariable = variableName;
+
         // Reuse existing variable form modal
         if (variableName) {
             document.getElementById('variable-form-title').textContent = 'Edit Variable';
             document.getElementById('variable-name').value = variableName;
+            document.getElementById('variable-name').disabled = true; // Disable name editing
             document.getElementById('variable-type').value = this.variables[variableName].type;
             document.getElementById('variable-value').value = JSON.stringify(this.variables[variableName].value);
+            document.getElementById('save-variable-form-btn').textContent = 'Update Variable';
         } else {
             document.getElementById('variable-form-title').textContent = 'Add Variable';
             document.getElementById('variable-name').value = '';
+            document.getElementById('variable-name').disabled = false;
             document.getElementById('variable-type').value = 'string';
             document.getElementById('variable-value').value = '';
+            document.getElementById('save-variable-form-btn').textContent = 'Add Variable';
         }
-        
+
         this.showModal('variable-form-modal');
+    }
+
+    closeVariableForm() {
+        this.hideModal('variable-form-modal');
+        this.editingVariable = null;
+        // Reset form button text
+        document.getElementById('save-variable-form-btn').textContent = 'Add Variable';
+        // Re-enable name field
+        document.getElementById('variable-name').disabled = false;
     }
 
     openTriggerForm() {
@@ -827,26 +869,54 @@ class VariableManager {
         }
 
         try {
-            // Save variables (excluding system variables)
-            const customVariables = {};
+            // Get current room data to check what variables existed before
+            const roomResponse = await fetch(`/api/rooms/${this.currentRoomId}`);
+            const roomData = await roomResponse.json();
+
+            let roomConfig = {};
+            let existingApiVariables = {};
+
+            if (roomData.success && roomData.data) {
+                // Parse existing config
+                if (roomData.data.config) {
+                    try {
+                        roomConfig = JSON.parse(roomData.data.config);
+                    } catch (e) {
+                        roomConfig = {};
+                    }
+                }
+
+                // Parse existing api_variables to see what was there before
+                if (roomData.data.api_variables) {
+                    try {
+                        existingApiVariables = JSON.parse(roomData.data.api_variables);
+                    } catch (e) {
+                        existingApiVariables = {};
+                    }
+                }
+            }
+
+            // Create new variables object with only current variables (excluding system ones)
+            const newVariables = {};
             Object.entries(this.variables).forEach(([name, config]) => {
                 if (!config.system) {
-                    customVariables[name] = config.value;
+                    // For custom variables, save just the value
+                    newVariables[name] = config.value;
+                } else {
+                    // For system variables, preserve them as-is
+                    newVariables[name] = config;
                 }
             });
 
-            // Get current room config to merge with triggers
-            const roomResponse = await fetch(`/api/rooms/${this.currentRoomId}`);
-            const roomData = await roomResponse.json();
-            
-            let roomConfig = {};
-            if (roomData.success && roomData.data && roomData.data.config) {
-                try {
-                    roomConfig = JSON.parse(roomData.data.config);
-                } catch (e) {
-                    roomConfig = {};
-                }
-            }
+            // Find variables that were deleted (existed before but not now)
+            const deletedVariables = Object.keys(existingApiVariables).filter(name => {
+                // Don't delete system variables or variables that still exist
+                return !this.variables[name] || (!this.variables[name].system && !newVariables[name]);
+            });
+
+            // Note: API doesn't have DELETE endpoint for individual variables
+            // Variables are deleted by not including them in the newVariables object
+            // when we update the room's api_variables field below
 
             // Add triggers to room config
             roomConfig.triggers = this.triggers;
@@ -856,7 +926,7 @@ class VariableManager {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    api_variables: customVariables,
+                    api_variables: newVariables,
                     config: roomConfig
                 })
             });
@@ -865,14 +935,14 @@ class VariableManager {
                 // Update the textarea in the main form
                 const apiTextarea = document.getElementById('api-variables');
                 if (apiTextarea) {
-                    apiTextarea.value = JSON.stringify(customVariables, null, 2);
+                    apiTextarea.value = JSON.stringify(newVariables, null, 2);
                 }
-                
+
                 const configTextarea = document.getElementById('config');
                 if (configTextarea) {
                     configTextarea.value = JSON.stringify(roomConfig, null, 2);
                 }
-                
+
                 this.hideModal('variable-modal');
                 this.showToast('Variables and triggers saved successfully', 'success');
             } else {
@@ -887,24 +957,26 @@ class VariableManager {
     async saveVariableForm(e) {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const form = document.getElementById('variable-form');
         const formData = new FormData(form);
-        
-        const variableName = formData.get('variableName')?.trim();
+
+        // Get variable name - if editing, use the stored name since the field is disabled
+        const variableName = this.editingVariable || formData.get('variableName')?.trim();
         const variableType = formData.get('variableType');
         const variableValue = formData.get('variableValue');
-        
+
         if (!variableName) {
             this.showToast('Variable name is required', 'error');
             return;
         }
-        
-        if (this.variables[variableName]) {
+
+        // Only check if variable exists when adding new (not editing)
+        if (!this.editingVariable && this.variables[variableName]) {
             this.showToast('Variable already exists', 'error');
             return;
         }
-        
+
         // Parse value based on type
         let parsedValue;
         try {
@@ -928,23 +1000,53 @@ class VariableManager {
             this.showToast('Invalid value format for type ' + variableType, 'error');
             return;
         }
-        
-        // Add to local variables
-        this.variables[variableName] = {
-            type: variableType,
-            value: parsedValue
-        };
-        
-        // Update the variables list display
-        this.renderVariables();
-        
-        // Close the modal
-        this.hideModal('variable-form-modal');
-        
-        // Clear the form
-        form.reset();
-        
-        this.showToast(`Variable "${variableName}" added successfully`, 'success');
+
+        try {
+            // Use POST for both editing and creating - API doesn't have separate PUT endpoint
+            const url = this.editingVariable
+                ? `/api/rooms/${this.currentRoomId}/variables/${variableName}`
+                : `/api/rooms/${this.currentRoomId}/variables`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: variableName,
+                    type: variableType,
+                    value: parsedValue
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Add to local variables for display
+                this.variables[variableName] = {
+                    type: variableType,
+                    value: parsedValue
+                };
+
+                // Update the variables list display
+                this.renderVariables();
+
+                // Close the modal
+                this.hideModal('variable-form-modal');
+
+                // Clear the form and editing state
+                form.reset();
+                this.editingVariable = null;
+
+                const action = this.editingVariable ? 'updated' : 'saved';
+                this.showToast(`Variable "${variableName}" ${action} successfully`, 'success');
+            } else {
+                this.showToast(`Failed to save variable: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error saving variable:', error);
+            this.showToast('Error saving variable to database', 'error');
+        }
     }
     
     setupActionConfigEventListeners() {

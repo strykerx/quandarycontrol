@@ -129,9 +129,25 @@
             </section>
 
             <section class="variable-monitor gm-control-section">
-                <h2 class="section-heading">📊 Live Game Variables</h2>
-                <div id="variable-display" class="state-card">
-                    <div class="state-content"></div>
+                <h2 class="section-heading">📊 Game Variables</h2>
+
+                <!-- User Variables Section -->
+                <div class="variable-section">
+                    <h3 class="variable-section-title">🎮 Game Variables</h3>
+                    <div id="user-variables-display" class="state-card">
+                        <div class="state-content"></div>
+                    </div>
+                </div>
+
+                <!-- Timer Variables Section (Collapsible) -->
+                <div class="variable-section">
+                    <h3 class="variable-section-title collapsible" id="timer-variables-toggle">
+                        ⏱️ Timer Variables
+                        <span class="toggle-arrow">▼</span>
+                    </h3>
+                    <div id="timer-variables-display" class="state-card collapsible-content" style="display: none;">
+                        <div class="state-content"></div>
+                    </div>
                 </div>
             </section>
 

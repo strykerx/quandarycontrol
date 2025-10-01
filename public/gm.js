@@ -22,7 +22,8 @@ socket.on('connect', () => {
     if (infoEl) infoEl.innerHTML = `Controlling Room: <strong>${roomId}</strong>`;
     fetchHintConfigAndToggle();
     initializeMediaUpload();
-    
+    loadGameVariables();
+
     // Initialize notification manager
     if (window.gmNotificationManager) {
       window.gmNotificationManager.initialize(roomId);
@@ -608,55 +609,308 @@ socket.on('clear_hints', () => {
   }
 });
 
-// Variable Management
-socket.on('variableUpdate', (data) => {
-  const container = document.getElementById('variable-display');
+// Timer variables that should be separated
+const TIMER_VARIABLES = [
+  'timer_duration', 'secondary_timer_enabled', 'secondary_timer_duration',
+  'timer_state', 'timer_remaining', 'secondary_timer_state', 'secondary_timer_remaining',
+  'timer_main', 'timer_secondary', 'timer_main_remaining', 'timer_secondary_remaining'
+];
+
+// Load game variables on page load
+async function loadGameVariables() {
+  try {
+    const response = await fetch(`/api/rooms/${roomId}/variables`);
+    const data = await response.json();
+
+    console.log('Variables API response:', data); // Debug log
+
+    if (data.success && data.data) {
+      // Debug: log the raw data structure
+      console.log('Raw variables data:', data.data);
+
+      // Filter variables into user and timer categories
+      const userVariables = data.data.filter(v => !TIMER_VARIABLES.includes(v.name));
+      const timerVariables = data.data.filter(v => TIMER_VARIABLES.includes(v.name));
+
+      console.log('User variables:', userVariables);
+      console.log('Timer variables:', timerVariables);
+
+      displayUserVariables(userVariables);
+      displayTimerVariables(timerVariables);
+      initializeCollapsibleSections();
+    } else {
+      console.warn('No variables found for room', roomId);
+      displayEmptyVariables();
+    }
+  } catch (error) {
+    console.error('Failed to load variables:', error);
+    displayEmptyVariables();
+  }
+}
+
+function displayEmptyVariables() {
+  const userContainer = document.querySelector('#user-variables-display .state-content');
+  const timerContainer = document.querySelector('#timer-variables-display .state-content');
+
+  if (userContainer) {
+    userContainer.innerHTML = '<div class="variable-empty-state">No game variables configured for this room</div>';
+  }
+  if (timerContainer) {
+    timerContainer.innerHTML = '<div class="variable-empty-state">No timer variables found</div>';
+  }
+}
+
+function displayUserVariables(variables) {
+  const container = document.querySelector('#user-variables-display .state-content');
+  if (!container) return;
+
   container.innerHTML = '';
-  
-  Object.entries(data.variables).forEach(([name, value]) => {
-    const control = document.createElement('div');
-    control.className = 'variable-control';
-    control.innerHTML = `
-      <label>${name}:</label>
-      ${getInputForType(name, value)}
-      <button class="btn-update" data-variable="${name}">Update</button>
-    `;
-    container.appendChild(control);
-  });
 
-  // Add update listeners
-  document.querySelectorAll('.btn-update').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const varName = e.target.dataset.variable;
-      const input = e.target.previousElementSibling;
-      socket.emit('updateVariable', { 
-        roomId,
-        variable: varName,
-        value: parseValue(input.value, input.type)
-      });
-    });
-  });
-});
+  if (!variables || variables.length === 0) {
+    container.innerHTML = '<div class="variable-empty-state">No game variables configured for this room</div>';
+    return;
+  }
 
-function getInputForType(name, value) {
-  const type = typeof value;
+  variables.forEach(variable => {
+    container.appendChild(createVariableControl(variable));
+  });
+}
+
+function displayTimerVariables(variables) {
+  const container = document.querySelector('#timer-variables-display .state-content');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (!variables || variables.length === 0) {
+    container.innerHTML = '<div class="variable-empty-state">No timer variables found</div>';
+    return;
+  }
+
+  variables.forEach(variable => {
+    container.appendChild(createVariableControl(variable));
+  });
+}
+
+function createVariableControl(variable) {
+  const control = document.createElement('div');
+  control.className = 'variable-control';
+
+  const nameLabel = document.createElement('div');
+  nameLabel.className = 'variable-name';
+  nameLabel.textContent = variable.name;
+
+  const inputContainer = document.createElement('div');
+  inputContainer.className = 'variable-input-container';
+
+  // Extract the actual value - handle both direct values and parsed_value structure
+  const actualValue = variable.parsed_value !== undefined ? variable.parsed_value : variable.value;
+  const valueType = typeof actualValue;
+
+  const typeBadge = document.createElement('span');
+  typeBadge.className = `variable-type-badge ${valueType}`;
+  typeBadge.textContent = valueType;
+
+  const input = createInputForVariable({ name: variable.name, value: actualValue });
+  // Store the original type on the input element for use during updates
+  input.dataset.originalType = valueType;
+
+  const updateBtn = document.createElement('button');
+  updateBtn.className = 'update-button';
+  updateBtn.textContent = 'Update';
+  updateBtn.dataset.variable = variable.name;
+
+  inputContainer.appendChild(input);
+  inputContainer.appendChild(typeBadge);
+  inputContainer.appendChild(updateBtn);
+
+  control.appendChild(nameLabel);
+  control.appendChild(inputContainer);
+
+  // Add update listener
+  updateBtn.addEventListener('click', () => updateVariable(variable.name, input));
+
+  return control;
+}
+
+function createInputForVariable(variable) {
+  const type = typeof variable.value;
+
   switch(type) {
     case 'boolean':
-      return `<input type="checkbox" ${value ? 'checked' : ''}>`;
+      return createToggleSwitch(variable.value);
     case 'number':
-      return `<input type="number" value="${value}">`;
+      const numberInput = document.createElement('input');
+      numberInput.type = 'number';
+      numberInput.value = variable.value;
+      numberInput.className = 'variable-input';
+      return numberInput;
     default:
-      return `<input type="text" value="${value}">`;
+      const textInput = document.createElement('input');
+      textInput.type = 'text';
+      textInput.value = variable.value;
+      textInput.className = 'variable-input';
+      return textInput;
   }
 }
 
-function parseValue(val, type) {
-  switch(type) {
-    case 'checkbox': return Boolean(val);
-    case 'number': return Number(val);
-    default: return val;
+function createToggleSwitch(checked) {
+  const switchContainer = document.createElement('label');
+  switchContainer.className = 'toggle-switch';
+
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.checked = checked;
+
+  const slider = document.createElement('span');
+  slider.className = 'toggle-slider';
+
+  switchContainer.appendChild(input);
+  switchContainer.appendChild(slider);
+
+  return switchContainer;
+}
+
+function initializeCollapsibleSections() {
+  const toggle = document.getElementById('timer-variables-toggle');
+  const content = document.getElementById('timer-variables-display');
+  const arrow = toggle.querySelector('.toggle-arrow');
+
+  if (toggle && content && arrow) {
+    toggle.addEventListener('click', () => {
+      const isHidden = content.style.display === 'none';
+
+      if (isHidden) {
+        content.style.display = 'block';
+        arrow.classList.remove('rotated');
+      } else {
+        content.style.display = 'none';
+        arrow.classList.add('rotated');
+      }
+    });
   }
 }
+
+async function updateVariable(varName, inputElement) {
+  try {
+    let value;
+    const originalType = inputElement.dataset.originalType;
+
+    // Handle toggle switch (label containing checkbox)
+    if (inputElement.classList.contains('toggle-switch')) {
+      const checkbox = inputElement.querySelector('input[type="checkbox"]');
+      value = checkbox.checked;
+    }
+    // Handle regular inputs
+    else if (inputElement.type === 'checkbox') {
+      value = inputElement.checked;
+    } else {
+      // Get the raw input value
+      const rawValue = inputElement.value;
+
+      // Convert based on original type
+      if (originalType === 'number') {
+        value = parseFloat(rawValue);
+        if (isNaN(value)) {
+          showVariableMessage(`Please enter a valid number for "${varName}"`, 'error');
+          return;
+        }
+      } else if (originalType === 'boolean') {
+        // Convert string representations to boolean
+        if (rawValue.toLowerCase() === 'true') {
+          value = true;
+        } else if (rawValue.toLowerCase() === 'false') {
+          value = false;
+        } else {
+          showVariableMessage(`Please enter "true" or "false" for boolean variable "${varName}"`, 'error');
+          return;
+        }
+      } else {
+        // Keep as string for string types and unknown types
+        value = rawValue;
+      }
+    }
+
+    const response = await fetch(`/api/rooms/${roomId}/variables/${varName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        value: value,
+        type: originalType
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      showVariableMessage(`Variable "${varName}" updated successfully`, 'success');
+      // Reload variables to show updated values
+      await loadGameVariables();
+    } else {
+      showVariableMessage(`Failed to update variable: ${result.error || 'Unknown error'}`, 'error');
+    }
+  } catch (error) {
+    console.error('Error updating variable:', error);
+    showVariableMessage('Failed to update variable', 'error');
+  }
+}
+
+function showVariableMessage(message, type = 'success') {
+  // Try to use existing status element, or create a temporary toast
+  const statusEl = document.getElementById('upload-status');
+  if (statusEl) {
+    statusEl.textContent = message;
+    statusEl.style.color = type === 'success' ? '#28a745' : '#dc3545';
+    setTimeout(() => {
+      statusEl.textContent = '';
+      statusEl.style.color = '';
+    }, 3000);
+  } else {
+    // Create temporary toast
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${type === 'success' ? '#28a745' : '#dc3545'};
+      color: white;
+      padding: 12px 24px;
+      border-radius: 4px;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.remove();
+    }, 3000);
+  }
+}
+
+// Variable Management - Legacy socket handler for real-time updates
+socket.on('variableUpdate', (data) => {
+  const variables = Object.entries(data.variables).map(([name, value], index) => ({
+    id: index,
+    name,
+    value,
+    parsed_value: value // For this socket handler, the value is already parsed
+  }));
+
+  // Filter and display in new sections
+  const userVariables = variables.filter(v => !TIMER_VARIABLES.includes(v.name));
+  const timerVariables = variables.filter(v => TIMER_VARIABLES.includes(v.name));
+
+  displayUserVariables(userVariables);
+  displayTimerVariables(timerVariables);
+});
+
+socket.on('variable_updated', (data) => {
+  // Reload variables when updated by other clients or API calls
+  loadGameVariables();
+});
 
 // Timer display updates
 socket.on('timer_update', (data) => {

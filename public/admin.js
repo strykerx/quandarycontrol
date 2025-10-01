@@ -453,8 +453,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const timerMMSS = forms.getFieldValue('timer-duration');
         const secondaryTimerEnabled = forms.getFieldValue('secondary-timer-enabled') || false;
         const secondaryTimerMMSS = forms.getFieldValue('secondary-timer-duration');
-        const apiVarsStr = forms.getFieldValue('api-variables') || '{}';
-        const configStr = forms.getFieldValue('config') || '{}';
+        // Read directly from DOM to get current values (in case variable manager updated them)
+        const apiVarsStr = document.getElementById('api-variables')?.value || '{}';
+        const configStr = document.getElementById('config')?.value || '{}';
         const selectedTheme = document.getElementById('room-theme')?.value || 'example-theme';
 
         let api_variables, config;

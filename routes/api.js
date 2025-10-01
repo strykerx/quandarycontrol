@@ -523,7 +523,7 @@ router.post('/rooms/:id/variables', (req, res) => {
     }
 
     // Support legacy types plus array/object for JSON compatibility
-    const validTypes = ['boolean', 'integer', 'string', 'array', 'object'];
+    const validTypes = ['boolean', 'integer', 'number', 'string', 'array', 'object'];
     if (!validTypes.includes(type)) {
       return res.status(400).json({
         success: false,
@@ -553,9 +553,10 @@ router.post('/rooms/:id/variables', (req, res) => {
         processedValue = Boolean(value);
         break;
       case 'integer':
+      case 'number':  // Accept both "number" and "integer"
         processedValue = Number(value);
         if (isNaN(processedValue)) {
-          return res.status(400).json({ success: false, error: 'Invalid integer value' });
+          return res.status(400).json({ success: false, error: 'Invalid number value' });
         }
         break;
       case 'array':
@@ -631,11 +632,12 @@ router.post('/rooms/:roomId/variables/:varName', (req, res) => {
         processedValue = Boolean(value);
         break;
       case 'integer':
+      case 'number':  // Accept both "number" and "integer"
         processedValue = Number(value);
         if (isNaN(processedValue)) {
           return res.status(400).json({
             success: false,
-            error: 'Invalid integer value'
+            error: 'Invalid number value'
           });
         }
         break;
