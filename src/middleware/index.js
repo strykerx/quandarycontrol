@@ -15,8 +15,9 @@ const middlewareLogger = logger.child({ module: 'middleware-main' });
 function initializeMiddleware(app) {
   middlewareLogger.info('Initializing middleware modules');
 
-  // Basic middleware
-  app.use(express.json());
+  // Basic middleware with increased limits for file uploads
+  app.use(express.json({ limit: '100mb' }));
+  app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
   // Request logging middleware (before routes)
   app.use(requestLogging);
