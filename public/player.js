@@ -140,18 +140,24 @@ function handleSocketDisconnected() {
 // Room management
 function joinRoom(id) {
     window.roomId = id;
+    roomId = id; // Also update the local variable
     console.log('Joining room:', id);
     socket.emit('join_room', { roomId: id, clientType: 'player' });
 
     // Update UI elements
-    elements.roomInfo.style.display = 'block';
-    elements.roomInfo.innerHTML = `
-        <div>PID: <strong>${id}</strong></div>
-    `;
+    if (elements.roomInfo) {
+        elements.roomInfo.style.display = 'block';
+        elements.roomInfo.innerHTML = `
+            <div>PID: <strong>${id}</strong></div>
+        `;
+    }
 
     updateRoomTitle(id, 'Loading...');
     loadRoomDetails(id);
     fetchHintConfigAndToggle();
+
+    // Initialize notification manager for this room
+    initializeNotificationManager(id);
 }
 
 async function resolveShortcodeAndJoin(shortcode) {

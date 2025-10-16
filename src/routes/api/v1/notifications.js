@@ -111,9 +111,9 @@ router.get('/rooms/:id/notifications/audio', (req, res) => {
             const stats = fs.statSync(filePath);
             return {
               id: file,
-              filename: file,
-              path: `/uploads/${file}`,
-              size: stats.size,
+              original_name: file,
+              file_path: `/uploads/${file}`,
+              file_size: stats.size,
               created_at: stats.birthtime,
               modified_at: stats.mtime
             };
@@ -201,19 +201,12 @@ router.get('/rooms/:id/notifications/settings', (req, res) => {
     }
 
     // Parse notification settings from room config
-    let settings = {
-      enabled: true,
-      volume: 50,
-      hintSound: null,
-      successSound: null,
-      errorSound: null,
-      timerSound: null
-    };
+    let settingsData = [];
 
     try {
       const config = JSON.parse(room.config || '{}');
-      if (config.notifications) {
-        settings = { ...settings, ...config.notifications };
+      if (config.notificationSettings && Array.isArray(config.notificationSettings)) {
+        settingsData = config.notificationSettings;
       }
     } catch (e) {
       notificationsLogger.warn('Invalid JSON in room config for notifications', {
@@ -223,14 +216,45 @@ router.get('/rooms/:id/notifications/settings', (req, res) => {
       });
     }
 
+    // If no settings exist, return empty array (client will use defaults)
+    if (settingsData.length === 0) {
+      notificationsLogger.info('No notification settings found, returning empty array', {
+        roomId: id,
+        ip: req.ip
+      });
+      return res.json({ success: true, data: [] });
+    }
+
+    // Enrich settings with file paths from audio files
+    const uploadsPath = path.join(__dirname, '../../../../../public/uploads');
+    const enrichedSettings = settingsData.map(setting => {
+      let filePath = null;
+      let originalName = null;
+
+      if (setting.audio_id) {
+        const audioPath = path.join(uploadsPath, setting.audio_id);
+        if (fs.existsSync(audioPath)) {
+          filePath = `/uploads/${setting.audio_id}`;
+          originalName = setting.audio_id;
+        }
+      }
+
+      return {
+        setting_type: setting.setting_type,
+        audio_id: setting.audio_id,
+        file_path: filePath,
+        enabled: setting.enabled !== undefined ? setting.enabled : true,
+        settings: setting.settings || { volume: 0.7 }
+      };
+    });
+
     notificationsLogger.info('Notification settings retrieved', {
       roomId: id,
-      enabled: settings.enabled,
-      volume: settings.volume,
+      settingsCount: enrichedSettings.length,
       ip: req.ip
     });
 
-    res.json({ success: true, data: settings });
+    res.json({ success: true, data: enrichedSettings });
   } catch (error) {
     notificationsLogger.error('Error retrieving notification settings', {
       roomId: req.params.id,
@@ -247,7 +271,7 @@ router.get('/rooms/:id/notifications/settings', (req, res) => {
 router.put('/rooms/:id/notifications/settings', (req, res) => {
   try {
     const { id } = req.params;
-    const { enabled, volume, hintSound, successSound, errorSound, timerSound } = req.body;
+    const { settings } = req.body;
 
     const db = getDatabase();
     const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id);
@@ -256,17 +280,38 @@ router.put('/rooms/:id/notifications/settings', (req, res) => {
       return res.status(404).json({ success: false, error: 'Room not found' });
     }
 
-    // Validate volume if provided
-    if (volume !== undefined && (volume < 0 || volume > 100 || isNaN(volume))) {
-      notificationsLogger.warn('Notification settings update failed - invalid volume', {
+    // Validate settings is an array
+    if (!Array.isArray(settings)) {
+      notificationsLogger.warn('Notification settings update failed - invalid format', {
         roomId: id,
-        volume,
+        receivedType: typeof settings,
         ip: req.ip
       });
       return res.status(400).json({
         success: false,
-        error: 'Volume must be a number between 0 and 100'
+        error: 'Settings must be an array'
       });
+    }
+
+    // Validate each setting
+    for (const setting of settings) {
+      if (!setting.setting_type) {
+        return res.status(400).json({
+          success: false,
+          error: 'Each setting must have a setting_type'
+        });
+      }
+
+      // Validate volume if present
+      if (setting.settings && setting.settings.volume !== undefined) {
+        const volume = setting.settings.volume;
+        if (volume < 0 || volume > 1 || isNaN(volume)) {
+          return res.status(400).json({
+            success: false,
+            error: 'Volume must be a number between 0 and 1'
+          });
+        }
+      }
     }
 
     // Parse current config
@@ -282,17 +327,8 @@ router.put('/rooms/:id/notifications/settings', (req, res) => {
       config = {};
     }
 
-    if (!config.notifications) {
-      config.notifications = {};
-    }
-
-    // Update notification settings
-    if (enabled !== undefined) config.notifications.enabled = Boolean(enabled);
-    if (volume !== undefined) config.notifications.volume = Number(volume);
-    if (hintSound !== undefined) config.notifications.hintSound = hintSound;
-    if (successSound !== undefined) config.notifications.successSound = successSound;
-    if (errorSound !== undefined) config.notifications.errorSound = errorSound;
-    if (timerSound !== undefined) config.notifications.timerSound = timerSound;
+    // Store the settings in the new format
+    config.notificationSettings = settings;
 
     // Update room config
     const updateStmt = db.prepare('UPDATE rooms SET config = ? WHERE id = ?');
@@ -300,12 +336,11 @@ router.put('/rooms/:id/notifications/settings', (req, res) => {
 
     notificationsLogger.info('Notification settings updated successfully', {
       roomId: id,
-      enabled: config.notifications.enabled,
-      volume: config.notifications.volume,
+      settingsCount: settings.length,
       ip: req.ip
     });
 
-    res.json({ success: true, data: config.notifications });
+    res.json({ success: true, data: settings });
   } catch (error) {
     notificationsLogger.error('Error updating notification settings', {
       roomId: req.params.id,

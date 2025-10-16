@@ -10,12 +10,38 @@ class RulesSlideshow {
         this.touchEndX = 0;
         this.navCooldownMs = 250;
         this.lastNavAt = 0;
-        
+
+        // Detect TV/kiosk environment for optimizations
+        this.isTVMode = this.detectTVMode();
+        if (this.isTVMode) {
+            console.log('[Slideshow] TV mode detected - applying optimizations');
+            this.applyTVOptimizations();
+        }
+
         this.initializeElements();
         this.initializeEventListeners();
         // Try to enter fullscreen as early as possible
         setTimeout(() => this.ensureFullscreen(), 0);
         this.loadRules();
+    }
+
+    detectTVMode() {
+        // Detect Android TV, Google TV, or Fully Kiosk Browser
+        const ua = navigator.userAgent.toLowerCase();
+        const isAndroidTV = ua.includes('android') && (ua.includes('tv') || ua.includes('aftm') || ua.includes('aftb'));
+        const isFullyKiosk = typeof window.fully !== 'undefined';
+        const isLargeScreen = window.innerWidth >= 1920 || window.screen.width >= 1920;
+
+        return isAndroidTV || isFullyKiosk || (isLargeScreen && ua.includes('android'));
+    }
+
+    applyTVOptimizations() {
+        // Add TV mode class to body for CSS optimizations
+        document.body.classList.add('tv-mode');
+
+        // Disable expensive visual effects
+        document.documentElement.style.setProperty('--disable-blur', '0');
+        document.documentElement.style.setProperty('--disable-transitions', '0');
     }
 
     getRoomIdFromUrl() {
@@ -129,34 +155,82 @@ class RulesSlideshow {
                 const video = document.createElement('video');
                 video.src = rule.url;
                 video.className = 'slide-media video';
-                // Attributes needed for reliable autoplay on most platforms
-                video.autoplay = true;
-                video.muted = true; // guarantee autoplay
-                video.playsInline = true; // iOS inline playback
-                video.setAttribute('autoplay', '');
+
+                // Only enable autoplay for the FIRST slide (index 0)
+                const isFirstSlide = index === 0;
+                video.autoplay = isFirstSlide;
+                video.muted = true; // Always start muted for autoplay to work
+                video.playsInline = true;
+                video.controls = false;
+
+                if (isFirstSlide) {
+                    video.setAttribute('autoplay', '');
+                }
                 video.setAttribute('muted', '');
                 video.setAttribute('playsinline', '');
-                video.controls = false; // no UI
+
+                // TV/Performance optimizations
+                if (this.isTVMode) {
+                    // Hardware acceleration hints for Android TV
+                    video.setAttribute('webkit-playsinline', '');
+                    video.setAttribute('x-webkit-airplay', 'deny'); // Prevent casting overhead
+
+                    // Only preload first video aggressively, others wait for manual preload
+                    video.preload = isFirstSlide ? 'auto' : 'none';
+
+                    // Explicit dimensions help hardware decoder
+                    video.width = 1920;
+                    video.height = 1080;
+
+                    // Disable poster to reduce compositing
+                    video.removeAttribute('poster');
+                } else {
+                    // Only preload metadata for first slide, nothing for others
+                    video.preload = isFirstSlide ? 'metadata' : 'none';
+                }
 
                 const tryPlay = async () => {
                     try {
                         const p = video.play();
                         if (p && typeof p.then === 'function') { await p; }
-                        try { console.debug('[Slideshow] video play started', { src: video.src }); } catch(_) {}
+                        console.log('[Slideshow] video play started', { src: video.src });
+
+                        // Unmute after playback starts (autoplay requires muted)
+                        setTimeout(() => {
+                            video.muted = false;
+                            console.log('[Slideshow] video unmuted');
+                        }, 100);
+
+                        // Preload next video when this one starts playing
+                        if (index < this.rules.length - 1 && this.rules[index + 1].type === 'video') {
+                            this.preloadVideo(index + 1);
+                        }
                     } catch (e) {
-                        try { console.warn('[Slideshow] video play failed', e); } catch(_) {}
+                        console.warn('[Slideshow] video play failed', e);
+                        // Retry once
                         try {
                             const p2 = video.play();
                             if (p2 && typeof p2.then === 'function') { await p2; }
-                            try { console.debug('[Slideshow] video play retry success', { src: video.src }); } catch(_) {}
+                            console.log('[Slideshow] video play retry success');
+
+                            // Unmute after successful retry
+                            setTimeout(() => {
+                                video.muted = false;
+                                console.log('[Slideshow] video unmuted after retry');
+                            }, 100);
                         } catch (e2) {
-                            try { console.error('[Slideshow] video play retry failed', e2); } catch(_) {}
+                            console.error('[Slideshow] video play retry failed', e2);
                         }
                     }
                 };
-                // Try as early as possible
+
+                // Try play when ready
                 video.addEventListener('loadedmetadata', tryPlay, { once: true });
-                video.addEventListener('canplay', () => { this.ensureFullscreen(); tryPlay(); }, { once: true });
+                video.addEventListener('canplay', () => {
+                    if (!this.isTVMode) this.ensureFullscreen();
+                    tryPlay();
+                }, { once: true });
+
                 slide.appendChild(video);
             } else {
                 const img = document.createElement('img');
@@ -236,16 +310,24 @@ class RulesSlideshow {
         // Update button states
         this.updateNavigationButtons();
 
-        // Pause any videos that are not active
+        // Pause any videos that are not active, reset to muted state
         const videos = this.elements.slideshowMain.querySelectorAll('video');
         videos.forEach((video, i) => {
             if (i !== index) {
-                video.pause();
+                // Stop any playing video
+                if (!video.paused) {
+                    video.pause();
+                }
                 video.currentTime = 0;
+                video.muted = true; // Re-mute for next autoplay
+
+                // Ensure autoplay is disabled on inactive videos
+                video.autoplay = false;
+                video.removeAttribute('autoplay');
             }
         });
 
-        // If the active slide is a video, force play
+        // If the active slide is a video, force play (will unmute after play starts)
         this.forcePlayIfVideo(index);
 
         // If this is the last slide and it's an image, auto-redirect after short delay
@@ -433,6 +515,29 @@ class RulesSlideshow {
         } catch (_) {}
     }
 
+    preloadVideo(index) {
+        // Preload the video at the specified index
+        const slides = this.elements.slideshowMain.querySelectorAll('.slide');
+        const targetSlide = slides[index];
+        if (!targetSlide) return;
+
+        const video = targetSlide.querySelector('video');
+        if (video && video.readyState < 2) {
+            console.log('[Slideshow] Preloading next video', { index, src: video.src });
+
+            // Disable autoplay before preloading to prevent it from starting
+            video.autoplay = false;
+            video.removeAttribute('autoplay');
+
+            // Keep it muted during preload
+            video.muted = true;
+
+            // Set preload and force load
+            video.preload = 'auto';
+            video.load(); // Force load but won't autoplay
+        }
+    }
+
     forcePlayIfVideo(index) {
         const slides = this.elements.slideshowMain.querySelectorAll('.slide');
         const active = slides[index];
@@ -446,7 +551,22 @@ class RulesSlideshow {
             v.setAttribute('muted', '');
             v.setAttribute('autoplay', '');
             v.setAttribute('playsinline', '');
-            const tryPlay = async () => { try { await v.play(); } catch(_) {} };
+            const tryPlay = async () => {
+                try {
+                    await v.play();
+
+                    // Unmute after playback starts
+                    setTimeout(() => {
+                        v.muted = false;
+                        console.log('[Slideshow] video unmuted (forcePlay)');
+                    }, 100);
+
+                    // Preload next video after this one starts
+                    if (index < this.rules.length - 1 && this.rules[index + 1].type === 'video') {
+                        this.preloadVideo(index + 1);
+                    }
+                } catch(_) {}
+            };
             tryPlay();
         }
     }

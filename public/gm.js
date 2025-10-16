@@ -24,9 +24,18 @@ socket.on('connect', () => {
     initializeMediaUpload();
     loadGameVariables();
 
-    // Initialize notification manager
+    // Initialize GM notification manager (for settings UI)
     if (window.gmNotificationManager) {
       window.gmNotificationManager.initialize(roomId);
+    }
+
+    // Initialize notification manager (for audio playback)
+    if (window.notificationManager) {
+      window.notificationManager.initialize(roomId).then(() => {
+        console.log('[GM] Notification manager initialized for audio playback');
+      }).catch(err => {
+        console.error('[GM] Failed to initialize notification manager:', err);
+      });
     }
   }
 });
@@ -575,6 +584,12 @@ socket.on('chat_message', (payload) => {
   row.textContent = `[${new Date(payload.timestamp || Date.now()).toLocaleTimeString()}] ${who}: ${payload.message}`;
   log.appendChild(row);
   log.parentElement.scrollTop = log.parentElement.scrollHeight;
+
+  // Play notification sound when GM receives chat from player
+  if (payload.sender === 'player' && window.notificationManager) {
+    console.log('[GM] Received chat from player, playing notification');
+    window.notificationManager.onGMChatReceived();
+  }
 });
 
 // Clear chat handler
