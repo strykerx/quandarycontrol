@@ -1,0 +1,28 @@
+{
+  "name": "Window Man",
+  "version": "1.0.0",
+  "description": "A theme featuring a man behind a window with speech bubble hints and large timer display",
+  "author": "Quandary Control",
+  "components": {
+    "timer": { "enabled": true },
+    "chat": { "enabled": true },
+    "hints": { "enabled": true },
+    "variables": { "enabled": true },
+    "media": { "enabled": true },
+    "room-info": { "enabled": true },
+    "game-state": { "enabled": true }
+  },
+  "variables": {
+    "primary-color": "#2c3e50",
+    "secondary-color": "#34495e",
+    "background-color": "#ecf0f1",
+    "text-color": "#2c3e50",
+    "accent-color": "#3498db",
+    "hint-bg": "#ffffff",
+    "hint-border": "#3498db",
+    "timer-bg": "#2c3e50",
+    "timer-color": "#ffffff",
+    "border-radius": "12px",
+    "font-family": "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+  }
+}
