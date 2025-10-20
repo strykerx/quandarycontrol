@@ -29,7 +29,7 @@
         <!-- Speech Bubble for Hints - Right Side -->
         <div class="speech-bubble-container">
             <div class="speech-bubble">
-                [hints showNavigation="true" autoCycle="false"]
+                [hints showNavigation="false" autoCycle="false"]
             </div>
         </div>
 
@@ -46,6 +46,7 @@
             [chat maxMessages="30" showTimestamps="true"]
             [variables updateInterval="1000"]
             [game-state showScore="false"]
+            [notifications showControls="true" showStatus="true"]
         </div>
 
         <!-- Media Lightbox -->
@@ -53,6 +54,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/notification-manager.js"></script>
     <script src="/player.js"></script>
 </body>
 </html>

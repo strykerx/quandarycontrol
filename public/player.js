@@ -739,24 +739,28 @@ function renderHints() {
     container.innerHTML = '';
 
     if (hints.length === 0) {
-        container.innerHTML = `
-            <div class="hint-card">
-                <p>Welcome to the Quandary Control system!</p>
-                <small>Awaiting game state...</small>
-            </div>
-        `;
+        container.innerHTML = `<div class="hint-placeholder">Awaiting hints...</div>`;
         return;
     }
 
-    hints.forEach(hint => {
-        const card = document.createElement('div');
-        card.className = `hint-card ${hint.new ? 'new' : ''}`;
-        card.innerHTML = `
-            <p>${hint.message}</p>
-            <small>${hint.timestamp}</small>
-        `;
-        container.appendChild(card);
-    });
+    // Only show the most recent hint
+    const latestHint = hints[0];
+    const hintLength = latestHint.message.length;
+
+    // Determine length class for font scaling
+    let lengthClass = '';
+    if (hintLength > 140) {
+        lengthClass = 'extra-long-hint';
+    } else if (hintLength > 100) {
+        lengthClass = 'very-long-hint';
+    } else if (hintLength > 50) {
+        lengthClass = 'long-hint';
+    }
+
+    const card = document.createElement('div');
+    card.className = `hint-card ${latestHint.new ? 'new' : ''} ${lengthClass}`;
+    card.innerHTML = `<p>${latestHint.message}</p>`;
+    container.appendChild(card);
 }
 
 // Clear chat function

@@ -1,11 +1,32 @@
-node_modules
-.ssh/
+# Dependencies
+node_modules/
+
+# Database files
+db/quandary.db
+db/quandary.db-shm
+db/quandary.db-wal
+*.db
+*.db-shm
+*.db-wal
+
+# User uploads
 public/uploads/
+
+# Environment configurations
 .env
+.env.local
+
+# Logs and temp files
 *.log
 logs/
+*.tmp
+
+# IDE configurations
 .vscode/
 .idea/
+
+# SSH keys
+.ssh/
 
 # Special Windows device files
 nul
@@ -15,16 +36,13 @@ nul
 .roo/
 .rooroo/
 .flutteroo
-.rooroo
-.vscode
+
+# Test artifacts
 playwright-report/
 test-results/
-node_modules/
+coverage/
 
-# Logs and temp files
-*.log
-*.tmp
-
-# Environment configurations
-.env
-.env.local
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -4,7 +4,7 @@
   "description": "Corporate/medical themed interface inspired by inSyn Biotics with news ticker hints and blackout timer",
   "author": "Quandary Team",
   "created_at": "2025-09-13T04:25:00.000Z",
-  "updated_at": "2025-09-13T05:00:24.454Z",
+  "updated_at": "2025-10-20T21:41:44.030Z",
   "components": {
     "timer": {
       "enabled": true
