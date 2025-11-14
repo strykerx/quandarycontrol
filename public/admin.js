@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Read directly from DOM to get current values (in case variable manager updated them)
         const apiVarsStr = document.getElementById('api-variables')?.value || '{}';
         const configStr = document.getElementById('config')?.value || '{}';
-        const selectedTheme = document.getElementById('room-theme')?.value || 'example-theme';
+        const selectedTheme = document.getElementById('room-theme')?.value || 'boilerplate';
 
         let api_variables, config;
         try {

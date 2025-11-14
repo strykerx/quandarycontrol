@@ -325,7 +325,7 @@ router.get('/shortcode/:shortcode', (req, res) => {
  */
 router.post('/rooms', (req, res) => {
   try {
-    const { name, config = {}, timer_duration = 0, secondary_timer_enabled = false, secondary_timer_duration = 0, api_variables = {}, hint_config = {}, theme = 'example-theme' } = req.body;
+    const { name, config = {}, timer_duration = 0, secondary_timer_enabled = false, secondary_timer_duration = 0, api_variables = {}, hint_config = {}, theme = 'boilerplate' } = req.body;
 
     if (!name) {
       return res.status(400).json({ success: false, error: 'Room name is required' });
@@ -1233,6 +1233,34 @@ router.put('/media/:mediaId', (req, res) => {
 
     const updated = db.prepare('SELECT * FROM room_media WHERE id = ?').get(mediaId);
     res.json({ success: true, data: toMediaDTO(updated) });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Update media title
+ */
+router.put('/media/:mediaId/title', (req, res) => {
+  try {
+    const { mediaId } = req.params;
+    const { title } = req.body;
+    const db = getDatabase();
+
+    // Check if media exists
+    const existing = db.prepare('SELECT id FROM room_media WHERE id = ?').get(mediaId);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Media not found' });
+    }
+
+    // Update the title
+    const result = db.prepare('UPDATE room_media SET title = ? WHERE id = ?').run(title, mediaId);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'Media not found' });
+    }
+
+    res.json({ success: true, message: 'Media title updated successfully' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

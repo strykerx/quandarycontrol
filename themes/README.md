@@ -1,6 +1,22 @@
 # Quandary Control Themes
 
-This directory contains themes for Quandary Control player interfaces. Each theme defines the HTML layout and styling for how players interact with escape rooms.
+This directory contains the core theme for Quandary Control player interfaces. Each theme defines the HTML layout and styling for how players interact with escape rooms.
+
+## Community Themes
+
+Looking for more themes? Check out the **[Quandary Control Community Themes](https://github.com/strykerx/quandarycontrol-themes)** repository for additional theme options including:
+- Windows 95 retro interface
+- Modern card-based design
+- 1930s newsreel aesthetic
+- And more!
+
+**Installation:**
+```bash
+cd themes
+git clone https://github.com/strykerx/quandarycontrol-themes.git community
+```
+
+Themes will be available under `themes/community/` folder.
 
 ## Theme Structure
 

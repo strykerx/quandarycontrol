@@ -46,3 +46,12 @@ coverage/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Community themes (separate repository)
+themes/community/
+themes/insyn/
+themes/window-man/
+themes/win95x/
+themes/modern-theme/
+themes/newsreel-1930s/
+themes/example-theme/
