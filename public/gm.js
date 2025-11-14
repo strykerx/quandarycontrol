@@ -1,6 +1,7 @@
 const socket = io();
 // Local storage media handler
 let roomId = null;
+let roomName = 'Game Master'; // Store room name for browser title
 
 // Get room ID from URL
 const pathSegments = window.location.pathname.split('/').filter(segment => segment);
@@ -39,6 +40,17 @@ socket.on('connect', () => {
     }
   }
 });
+
+// Helper function to update browser tab title with room name and timer
+function updateBrowserTitle(timeInSeconds = null) {
+  if (timeInSeconds !== null) {
+    const minutes = Math.floor(timeInSeconds / 60).toString().padStart(2, '0');
+    const seconds = (timeInSeconds % 60).toString().padStart(2, '0');
+    document.title = `${roomName} - ${minutes}:${seconds}`;
+  } else {
+    document.title = `${roomName} - Game Master`;
+  }
+}
 
 function initializeMediaUpload() {
   // 1) If markup already exists in gm.html, just wire up handlers
@@ -178,20 +190,28 @@ async function loadRoomMedia() {
 function displayMediaGallery(mediaItems) {
   const gallery = document.getElementById('media-gallery');
   if (!gallery) return;
-  
+
   gallery.innerHTML = '';
-  
+
   mediaItems.forEach(item => {
     const mediaElement = document.createElement('div');
     mediaElement.className = 'media-item';
     mediaElement.dataset.mediaId = item.id;
-    
+
+    // Extract filename from URL
+    const filename = item.url.split('/').pop();
+    const displayName = item.title || filename;
+
     if (item.type === 'image') {
       mediaElement.innerHTML = `
-        <img src="${item.url}" alt="${item.title}" class="media-thumbnail">
+        <img src="${item.url}" alt="${displayName}" class="media-thumbnail">
         <div class="media-info">
-          <span class="media-title">${item.title || 'Untitled'}</span>
+          <div class="media-filename" style="font-size: 0.8em; color: #888; margin-bottom: 0.25rem;" title="${filename}">${filename}</div>
+          <input type="text" class="media-title-input form-input" value="${displayName}"
+                 data-media-id="${item.id}"
+                 style="width: 100%; margin-bottom: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.9em;">
           <div class="media-buttons">
+            <button class="btn-update-media nav-button secondary" data-media-id="${item.id}" style="min-width: 60px;">Update</button>
             <button class="btn-select-media nav-button secondary" data-media-id="${item.id}">Select</button>
             <button class="btn-delete-media nav-button secondary" data-media-id="${item.id}" style="background-color: #dc3545; min-width: 35px; padding: 0.5rem;">🗑️</button>
           </div>
@@ -201,18 +221,33 @@ function displayMediaGallery(mediaItems) {
       mediaElement.innerHTML = `
         <video src="${item.url}" class="media-thumbnail" muted></video>
         <div class="media-info">
-          <span class="media-title">${item.title || 'Untitled'}</span>
+          <div class="media-filename" style="font-size: 0.8em; color: #888; margin-bottom: 0.25rem;" title="${filename}">${filename}</div>
+          <input type="text" class="media-title-input form-input" value="${displayName}"
+                 data-media-id="${item.id}"
+                 style="width: 100%; margin-bottom: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.9em;">
           <div class="media-buttons">
+            <button class="btn-update-media nav-button secondary" data-media-id="${item.id}" style="min-width: 60px;">Update</button>
             <button class="btn-select-media nav-button secondary" data-media-id="${item.id}">Select</button>
             <button class="btn-delete-media nav-button secondary" data-media-id="${item.id}" style="background-color: #dc3545; min-width: 35px; padding: 0.5rem;">🗑️</button>
           </div>
         </div>
       `;
     }
-    
+
     gallery.appendChild(mediaElement);
   });
-  
+
+  // Add event listeners for media update
+  document.querySelectorAll('.btn-update-media').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const mediaId = e.target.dataset.mediaId;
+      const input = document.querySelector(`.media-title-input[data-media-id="${mediaId}"]`);
+      if (input) {
+        updateMediaTitle(mediaId, input.value);
+      }
+    });
+  });
+
   // Add event listeners for media selection and deletion
   document.querySelectorAll('.btn-select-media').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -272,6 +307,39 @@ function showLightboxOnPlayer() {
   };
 
   socket.emit('show_lightbox', payload);
+}
+
+async function updateMediaTitle(mediaId, newTitle) {
+  try {
+    const response = await fetch(`/api/media/${mediaId}/title`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ title: newTitle })
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      // Show success message
+      const statusEl = document.getElementById('upload-status');
+      if (statusEl) {
+        statusEl.textContent = 'Media title updated successfully';
+        setTimeout(() => {
+          statusEl.textContent = '';
+        }, 3000);
+      }
+    } else {
+      alert(`Failed to update media title: ${result.error}`);
+      // Reload gallery to restore original title
+      loadRoomMedia();
+    }
+  } catch (error) {
+    console.error('Error updating media title:', error);
+    alert('Failed to update media title');
+    // Reload gallery to restore original title
+    loadRoomMedia();
+  }
 }
 
 async function deleteMediaFile(mediaId) {
@@ -931,6 +999,8 @@ socket.on('variable_updated', (data) => {
 socket.on('timer_update', (data) => {
   document.getElementById('timer-display').textContent =
     `${Math.floor(data.remaining/60).toString().padStart(2,'0')}:${(data.remaining%60).toString().padStart(2,'0')}`;
+  // Update browser tab title with current timer
+  updateBrowserTitle(data.remaining);
 });
 
 // Secondary timer update
@@ -1099,7 +1169,7 @@ class GMCustomization {
   async updateRoomTitle() {
     try {
       if (!this.roomId) return;
-      
+
       const response = await fetch(`/api/rooms/${this.roomId}`);
       if (response.ok) {
         const data = await response.json();
@@ -1108,6 +1178,9 @@ class GMCustomization {
           if (titleElement) {
             titleElement.textContent = `${data.data.name} Control`;
           }
+          // Store room name globally and update browser tab title
+          roomName = data.data.name;
+          updateBrowserTitle();
         }
       }
     } catch (error) {
