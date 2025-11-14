@@ -36,6 +36,17 @@ nul
 .roo/
 .rooroo/
 .flutteroo
+.playwright-mcp/
+
+# Development and testing utilities
+CLAUDE.md.bak.md
+WEBHOOK_TESTING.md
+claude_desktop_config.json
+package-webhook-tester.json
+test-webhook-utility.js
+webhook-tester.js
+tester/
+temp.txt
 
 # Test artifacts
 playwright-report/
